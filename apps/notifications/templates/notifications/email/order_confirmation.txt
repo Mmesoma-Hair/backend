@@ -1,0 +1,10 @@
+Order {{ order_number }} confirmed
+
+Thanks for your order! Summary:
+{% for item in items %}- {{ item.title }} x{{ item.quantity }}  {{ item.line_total }}
+{% endfor %}
+Total: {{ order_total }}
+{% if order_url %}
+View order: {{ order_url }}{% endif %}
+
+Need help? Contact {{ support_email }}.

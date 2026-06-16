@@ -1,0 +1,7 @@
+Welcome{% if name %}, {{ name }}{% endif %}!
+
+Thanks for creating an account at {{ store_name }}. You're all set to start shopping.
+
+Browse the shop: {{ frontend_url }}/catalog
+
+Need help? Contact {{ support_email }}.

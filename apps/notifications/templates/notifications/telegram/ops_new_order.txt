@@ -1,0 +1,5 @@
+<b>🛒 New paid order {{ order_number }}</b>
+Total: {{ order_total }}
+Items: {{ items_count }}
+Customer: {{ contact_email }}{% if paid_by %}
+Paid by: {{ paid_by }}{% endif %}

@@ -1,0 +1,2 @@
+<b>✅ Order {{ order_number }} confirmed</b>
+Total: {{ order_total }}

@@ -1,0 +1,7 @@
+{% extends "notifications/email/base.html" %}
+{% block content %}
+<h1 style="font-size:20px;margin:0 0 12px;">Confirm your email</h1>
+<p style="margin:0 0 16px;line-height:1.5;">Welcome{% if name %}, {{ name }}{% endif %}! Please confirm this email address to secure your {{ store_name }} account and receive order updates.</p>
+<a href="{{ verify_url }}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;">Verify email</a>
+<p style="margin:16px 0 0;font-size:13px;color:#666;">Or paste this link: {{ verify_url }}</p>
+{% endblock %}

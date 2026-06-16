@@ -1,0 +1,8 @@
+Confirm your {{ store_name }} email
+
+Welcome{% if name %}, {{ name }}{% endif %}! Please confirm this email address to
+secure your account and receive order updates.
+
+{{ verify_url }}
+
+Need help? Contact {{ support_email }}.

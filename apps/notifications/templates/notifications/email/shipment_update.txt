@@ -1,0 +1,6 @@
+Your order has shipped
+
+Part of order {{ order_number }} is on its way{% if carrier %} via {{ carrier }}{% endif %}.
+{% if tracking_number %}Tracking number: {{ tracking_number }}{% endif %}
+{% if order_url %}
+Track order: {{ order_url }}{% endif %}

@@ -1,0 +1,7 @@
+Payment received
+
+We've received your payment of {{ order_total }} for order {{ order_number }}.
+{% if paid_by %}Paid by {{ paid_by }}.{% endif %}
+We're preparing it for fulfillment now.
+{% if order_url %}
+View order: {{ order_url }}{% endif %}
