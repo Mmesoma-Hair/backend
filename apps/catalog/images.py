@@ -157,12 +157,25 @@ def get_image_backend() -> BaseImageBackend:
     return backend_cls()
 
 
+def _backend_for(public_id: str) -> BaseImageBackend:
+    """Pick the delivery backend for a stored ``public_id``.
+
+    Locally generated demo placeholders are stored as ``static/...`` and are
+    always served from the storefront's ``/public`` folder, regardless of the
+    configured backend — so switching uploads to Cloudinary never breaks them.
+    Everything else (real uploads) uses the configured backend.
+    """
+    if public_id.startswith("static/"):
+        return StaticImageBackend()
+    return get_image_backend()
+
+
 def cloudinary_url(public_id: str, variant: str = "card") -> str:
-    """Convenience: build a delivery URL via the configured backend."""
-    return get_image_backend().build_url(public_id, variant)
+    """Convenience: build a delivery URL for a stored public_id."""
+    return _backend_for(public_id).build_url(public_id, variant)
 
 
 def image_urls(public_id: str) -> dict[str, str]:
     """All named-variant URLs for a public_id (what serializers expose)."""
-    backend = get_image_backend()
+    backend = _backend_for(public_id)
     return {name: backend.build_url(public_id, name) for name in IMAGE_VARIANTS}

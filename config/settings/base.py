@@ -280,9 +280,28 @@ CORS_ALLOW_CREDENTIALS = True
 RATES_PROVIDER = env("RATES_PROVIDER", "mock")
 CURRENCY_API_NET_KEY = env("CURRENCY_API_NET_KEY")
 
-# Payments (Phase 6). Provider-agnostic; "mock" needs no external account.
+# Payments. Provider-agnostic: "mock" | "paystack" | "flutterwave".
 PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", "mock")
 PAYMENT_WEBHOOK_SECRET = env("PAYMENT_WEBHOOK_SECRET", "dev-webhook-secret")
+PAYMENT_HTTP_TIMEOUT = int(env("PAYMENT_HTTP_TIMEOUT", "15") or "15")
+# Public base URL of THIS API (used to show the webhook URL admins paste into
+# the gateway dashboard). In prod set to your real domain; for local testing
+# with Paystack/Flutterwave use your tunnel URL (e.g. an ngrok https URL).
+API_PUBLIC_BASE_URL = env("API_PUBLIC_BASE_URL", "http://localhost:8000")
+# Where the gateway redirects the shopper after paying. {order} is the order
+# number; the gateway appends its own params (reference/tx_ref/status).
+PAYMENT_RETURN_URL = env(
+    "PAYMENT_RETURN_URL",
+    f"{FRONTEND_BASE_URL.rstrip('/')}/checkout/processing?order={{order}}",
+)
+# Paystack (https://dashboard.paystack.com)
+PAYSTACK_SECRET_KEY = env("PAYSTACK_SECRET_KEY", "")
+PAYSTACK_PUBLIC_KEY = env("PAYSTACK_PUBLIC_KEY", "")
+# Flutterwave (https://dashboard.flutterwave.com). SECRET_HASH must match the
+# value set in the dashboard webhook settings (sent as the verif-hash header).
+FLUTTERWAVE_SECRET_KEY = env("FLUTTERWAVE_SECRET_KEY", "")
+FLUTTERWAVE_PUBLIC_KEY = env("FLUTTERWAVE_PUBLIC_KEY", "")
+FLUTTERWAVE_SECRET_HASH = env("FLUTTERWAVE_SECRET_HASH", "")
 
 # --- Notifications (Phase 9) ------------------------------------------------
 # Provider-agnostic transactional dispatch. Email + Telegram, async via Celery.

@@ -25,7 +25,7 @@ class PaymentWebhookView(APIView):
     @extend_schema(request=None, responses={200: dict}, tags=["payments"])
     def post(self, request: Request) -> Response:
         provider = get_payment_provider()
-        signature = request.headers.get("X-Signature", "")
+        signature = request.headers.get(provider.signature_header, "")
         result = services.process_webhook(
             provider_name=provider.name,
             payload=request.body,

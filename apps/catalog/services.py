@@ -22,6 +22,9 @@ from apps.common.exceptions import ConflictError, DomainError
 
 from .images import get_image_backend
 from .models import (
+    Brand,
+    Category,
+    OptionType,
     OptionValue,
     Product,
     ProductImage,
@@ -124,14 +127,31 @@ def generate_variants(
     created: list[Variant] = []
     existing_keys = set(product.variants.values_list("options_key", flat=True))
 
-    for index, combo in enumerate(itertools.product(*value_groups), start=1):
+    # SKUs are globally unique. Track every SKU already using this prefix (across
+    # all products + this product's earlier generations) and hand out the next
+    # free number, so regenerating or reusing a prefix never collides.
+    used_skus = set(
+        Variant.objects.filter(sku__startswith=f"{prefix}-").values_list("sku", flat=True)
+    )
+    counter = 0
+
+    def next_sku() -> str:
+        nonlocal counter
+        while True:
+            counter += 1
+            candidate = f"{prefix}-{counter:03d}"
+            if candidate not in used_skus:
+                used_skus.add(candidate)
+                return candidate
+
+    for combo in itertools.product(*value_groups):
         ids = [v.id for v in combo]
         key = compute_options_key(ids)
         if key in existing_keys:
             continue
         variant = Variant.objects.create(
             product=product,
-            sku=f"{prefix}-{index:03d}",
+            sku=next_sku(),
             price=default_price,
             options_key=key,
         )
@@ -141,6 +161,85 @@ def generate_variants(
         existing_keys.add(key)
         created.append(variant)
     return created
+
+
+@transaction.atomic
+def create_product_full(
+    *,
+    title: str,
+    description: str = "",
+    category_id: int | None = None,
+    new_category: str = "",
+    brand_id: int | None = None,
+    fulfillment_type: str = "internal",
+    is_active: bool = True,
+    image_public_id: str = "",
+    kind: str = "simple",
+    sku: str | None = None,
+    price: Decimal | None = None,
+    stock: int = 0,
+    options: list[dict] | None = None,
+    default_price: Decimal | None = None,
+    sku_prefix: str | None = None,
+    stock_per_variant: int = 0,
+) -> Product:
+    """Create a product and everything it needs in ONE transaction.
+
+    Either a simple product (one default variant) or a variable product (option
+    types/values + a generated variant matrix), plus an optional featured image
+    and starting stock. Because it's atomic, a failure anywhere (e.g. a SKU
+    clash) rolls the whole thing back — so a retry never leaves orphan products.
+    """
+    # Local imports avoid any import cycle at module load.
+    from django.utils.text import slugify
+
+    from apps.inventory.services import set_stock
+
+    category: Category | None = None
+    if new_category.strip():
+        name = new_category.strip()
+        category, _ = Category.objects.get_or_create(
+            slug=slugify(name) or name.lower(), defaults={"name": name}
+        )
+    elif category_id:
+        category = Category.objects.filter(id=category_id).first()
+    brand = Brand.objects.filter(id=brand_id).first() if brand_id else None
+
+    product = Product.objects.create(
+        title=title.strip(),
+        description=description.strip(),
+        category=category,
+        brand=brand,
+        fulfillment_type=fulfillment_type,
+        is_active=is_active,
+    )
+
+    if image_public_id.strip():
+        add_product_image(
+            product, public_id=image_public_id.strip(), alt_text=title.strip(), is_primary=True
+        )
+
+    if kind == "variable":
+        for i, opt in enumerate(options or []):
+            option_type = OptionType.objects.create(product=product, name=opt["name"], position=i)
+            OptionValue.objects.bulk_create(
+                [
+                    OptionValue(option_type=option_type, value=val, position=j)
+                    for j, val in enumerate(opt["values"])
+                ]
+            )
+        variants = generate_variants(
+            product, default_price=default_price or Decimal("0"), sku_prefix=sku_prefix or None
+        )
+        if stock_per_variant > 0:
+            for variant in variants:
+                set_stock(variant, stock_per_variant)
+    else:
+        variant = ensure_default_variant(product, sku=sku or "", price=price or Decimal("0"))
+        if stock > 0:
+            set_stock(variant, stock)
+
+    return product
 
 
 # --- images -----------------------------------------------------------------
@@ -171,7 +270,11 @@ def add_product_image(
     if variant is not None and variant.product_id != product.id:
         raise DomainError("Variant does not belong to this product.", code="variant_mismatch")
 
-    return ProductImage.objects.create(
+    # One image per variant: a new variant image replaces the old one.
+    if variant is not None:
+        ProductImage.objects.filter(product=product, variant=variant).delete()
+
+    image = ProductImage.objects.create(
         product=product,
         variant=variant,
         public_id=public_id,
@@ -179,6 +282,25 @@ def add_product_image(
         is_primary=is_primary,
         position=position,
     )
+    # A product has a single featured (primary) product-level image.
+    if is_primary and variant is None:
+        _unset_other_primaries(image)
+    return image
+
+
+def _unset_other_primaries(image: ProductImage) -> None:
+    ProductImage.objects.filter(
+        product_id=image.product_id, variant__isnull=True, is_primary=True
+    ).exclude(id=image.id).update(is_primary=False)
+
+
+def set_primary_image(image: ProductImage) -> ProductImage:
+    """Make ``image`` the product's featured image; unset the others."""
+    if not image.is_primary:
+        image.is_primary = True
+        image.save(update_fields=["is_primary", "updated_at"])
+    _unset_other_primaries(image)
+    return image
 
 
 def upload_signature(extra_params: dict | None = None) -> dict:

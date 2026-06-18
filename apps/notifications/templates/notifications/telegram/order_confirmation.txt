@@ -1,2 +1,9 @@
 <b>✅ Order {{ order_number }} confirmed</b>
-Total: {{ order_total }}
+{{ order_date }}
+{% for item in items %}
+• {{ item.title }} ×{{ item.quantity }} — {{ item.line_total }}{% endfor %}
+
+Subtotal: {{ subtotal }}{% if discount %}
+Discount: −{{ discount }}{% endif %}
+<b>Total: {{ order_total }}</b>{% if has_shipping %}
+📦 {{ shipping.name }}, {{ shipping.city }}{% if shipping.country %}, {{ shipping.country }}{% endif %}{% endif %}

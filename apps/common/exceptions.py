@@ -14,6 +14,7 @@ from typing import Any
 
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError
 from django.http import Http404
 from rest_framework import exceptions, status
 from rest_framework.response import Response
@@ -60,6 +61,13 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
         exc = exceptions.PermissionDenied()
     elif isinstance(exc, DjangoValidationError):
         exc = exceptions.ValidationError(detail=getattr(exc, "message_dict", exc.messages))
+    elif isinstance(exc, IntegrityError):
+        # DB unique/constraint violations (e.g. duplicate SKU) → clean 409
+        # instead of a 500, without leaking DB internals to the client.
+        exc = ConflictError(
+            "This conflicts with an existing record — a value that must be "
+            "unique (such as a SKU) is already in use."
+        )
 
     response = drf_exception_handler(exc, context)
     if response is None:

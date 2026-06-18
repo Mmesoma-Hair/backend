@@ -1,18 +1,14 @@
 {% extends "notifications/email/base.html" %}
 {% block content %}
-<h1 style="font-size:20px;margin:0 0 12px;">Order {{ order_number }} confirmed</h1>
-<p style="margin:0 0 16px;line-height:1.5;">Thanks for your order! Here's a summary:</p>
-<table style="width:100%;border-collapse:collapse;font-size:14px;">
-  {% for item in items %}
-  <tr>
-    <td style="padding:6px 0;border-bottom:1px solid #f0f0f0;">{{ item.title }} &times;{{ item.quantity }}</td>
-    <td style="padding:6px 0;border-bottom:1px solid #f0f0f0;text-align:right;">{{ item.line_total }}</td>
-  </tr>
-  {% endfor %}
-  <tr>
-    <td style="padding:10px 0;font-weight:bold;">Total</td>
-    <td style="padding:10px 0;text-align:right;font-weight:bold;">{{ order_total }}</td>
-  </tr>
-</table>
-{% if order_url %}<a href="{{ order_url }}" style="display:inline-block;margin-top:12px;background:#111;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;">View order</a>{% endif %}
+<h1 style="font-size:20px;margin:0 0 8px;color:#111;">Thank you{% if customer_name %}, {{ customer_name }}{% endif %}!</h1>
+<p style="margin:0 0 18px;line-height:1.5;color:#444;">
+  Your order is confirmed and being prepared. Here's everything in it:
+</p>
+{% include "notifications/email/_order_details.html" %}
+<div style="margin-top:22px;">
+  <a href="{{ order_url }}" style="display:inline-block;background:#6E0D25;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;">View your orders</a>
+</div>
+<p style="margin:18px 0 0;font-size:13px;color:#888;line-height:1.5;">
+  A confirmation was also sent to {{ contact_email }}.{% if paid_by %} Paid by {{ paid_by }}.{% endif %}
+</p>
 {% endblock %}

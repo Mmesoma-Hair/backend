@@ -20,6 +20,7 @@ WELCOME = "welcome"
 EMAIL_VERIFICATION = "email_verification"
 PASSWORD_RESET = "password_reset"
 ORDER_CONFIRMATION = "order_confirmation"
+ORDER_CANCELLED = "order_cancelled"
 PAYMENT_RECEIVED = "payment_received"
 SHIPMENT_UPDATE = "shipment_update"
 OPS_NEW_ORDER = "ops_new_order"
@@ -29,6 +30,7 @@ EVENTS: dict[str, dict[str, str]] = {
     EMAIL_VERIFICATION: {"subject": "Verify your {store_name} email"},
     PASSWORD_RESET: {"subject": "Reset your {store_name} password"},
     ORDER_CONFIRMATION: {"subject": "{store_name}: order {order_number} confirmed"},
+    ORDER_CANCELLED: {"subject": "{store_name}: order {order_number} {cancel_word}"},
     PAYMENT_RECEIVED: {"subject": "{store_name}: payment received for {order_number}"},
     SHIPMENT_UPDATE: {"subject": "{store_name}: order {order_number} has shipped"},
     OPS_NEW_ORDER: {"subject": "New paid order {order_number}"},

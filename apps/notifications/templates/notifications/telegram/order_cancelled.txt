@@ -1,0 +1,6 @@
+<b>⚠️ Order {{ order_number }} {{ cancel_word }}</b>
+{% if is_refund %}Your payment has been refunded.{% else %}Your order has been cancelled.{% endif %}
+{% for item in items %}
+• {{ item.title }} ×{{ item.quantity }} — {{ item.line_total }}{% endfor %}
+
+<b>Total: {{ order_total }}</b>

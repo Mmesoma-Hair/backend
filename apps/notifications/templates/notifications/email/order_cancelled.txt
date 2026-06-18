@@ -1,0 +1,15 @@
+Order {{ order_number }} {{ cancel_word }}
+
+{% if is_refund %}Your payment for this order has been refunded. It may take a few business days to appear.{% else %}Your order has been cancelled. If you were charged, the amount will be reversed.{% endif %}
+
+Order number: {{ order_number }}
+Order date:   {{ order_date }}
+
+Items:
+{% for item in items %}- {{ item.title }}{% if item.sku %} (SKU {{ item.sku }}){% endif %} — Qty {{ item.quantity }} x {{ item.unit_price }} = {{ item.line_total }}
+{% endfor %}
+Subtotal: {{ subtotal }}
+{% if discount %}Discount{% if discount_codes %} ({{ discount_codes }}){% endif %}: -{{ discount }}
+{% endif %}Total:    {{ order_total }}
+
+Questions about this {{ cancel_word }}? Contact {{ support_email }}.

@@ -29,6 +29,8 @@ class Payment(BaseModel):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3)
     intent_id = models.CharField(max_length=128, blank=True, db_index=True)
+    # Hosted-checkout URL the shopper is redirected to (Paystack/Flutterwave).
+    authorization_url = models.URLField(max_length=1000, blank=True)
 
     # Payer identity (may differ from order.owner).
     paid_by_user = models.ForeignKey(

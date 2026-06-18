@@ -37,19 +37,28 @@ class PublicConfigView(views.APIView):
         return Response({"settings": public})
 
 
+def _spec_dict(spec, values: dict) -> dict:
+    stored = values.get(spec.key, spec.default)
+    item = {
+        "key": spec.key,
+        "section": spec.section,
+        "type": spec.type,
+        "description": spec.description,
+        "default": "" if spec.secret else spec.default,
+        "secret": spec.secret,
+    }
+    if spec.secret:
+        # Never return a secret value — only whether one is set.
+        item["value"] = ""
+        item["is_set"] = bool(stored)
+    else:
+        item["value"] = stored
+    return item
+
+
 def _spec_payload() -> list[dict]:
     values = selectors.get_all_settings()
-    return [
-        {
-            "key": spec.key,
-            "section": spec.section,
-            "type": spec.type,
-            "description": spec.description,
-            "default": spec.default,
-            "value": values.get(spec.key, spec.default),
-        }
-        for spec in SETTINGS.values()
-    ]
+    return [_spec_dict(spec, values) for spec in SETTINGS.values()]
 
 
 class AdminSettingsView(views.APIView):
@@ -101,11 +110,4 @@ class AdminSettingDetailView(views.APIView):
 
 def _single_payload(key: str) -> dict:
     spec = SETTINGS[key]
-    return {
-        "key": spec.key,
-        "section": spec.section,
-        "type": spec.type,
-        "description": spec.description,
-        "default": spec.default,
-        "value": selectors.get_setting(key),
-    }
+    return _spec_dict(spec, {key: selectors.get_setting(key)})

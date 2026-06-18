@@ -48,6 +48,7 @@ def _order_payload(order: Order) -> dict[str, Any]:
             "provider": payment.provider,
             "intent_id": payment.intent_id,
             "status": payment.status,
+            "authorization_url": payment.authorization_url,
         }
         if payment
         else None
@@ -187,3 +188,27 @@ class OrderDetailView(APIView):
         if not (owns or claims_guest):
             return Response(status=status.HTTP_403_FORBIDDEN)
         return Response(_order_payload(order))
+
+
+class OrderStatusView(APIView):
+    """Public, minimal order status by number — used by the post-payment poll.
+
+    Returns only the status (no PII), so a shopper (incl. guests) returning from
+    the gateway can wait for the webhook to mark the order paid.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+
+    @extend_schema(responses={200: dict}, tags=["orders"])
+    def get(self, request: Request, number: str) -> Response:
+        order = Order.objects.filter(number=number).only("number", "status", "paid_at").first()
+        if order is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {
+                "number": order.number,
+                "status": order.status,
+                "paid": order.paid_at is not None,
+            }
+        )

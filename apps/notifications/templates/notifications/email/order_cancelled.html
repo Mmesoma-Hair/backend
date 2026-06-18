@@ -1,0 +1,17 @@
+{% extends "notifications/email/base.html" %}
+{% block content %}
+<h1 style="font-size:20px;margin:0 0 8px;color:#111;">Order {{ order_number }} {{ cancel_word }}</h1>
+<p style="margin:0 0 18px;line-height:1.5;color:#444;">
+  {% if is_refund %}
+    Your payment for this order has been <strong>refunded</strong>. Refunds typically take a few business days to appear on your statement.
+  {% else %}
+    Your order has been <strong>cancelled</strong>. {% if order_total %}If you were charged, the amount will be reversed.{% endif %}
+  {% endif %}
+  Here's a summary of what was in it:
+</p>
+{% include "notifications/email/_order_details.html" %}
+<p style="margin:20px 0 0;font-size:13px;color:#888;line-height:1.5;">
+  Questions about this {{ cancel_word }}? Just reply or contact
+  <a href="mailto:{{ support_email }}" style="color:#6E0D25;">{{ support_email }}</a>.
+</p>
+{% endblock %}

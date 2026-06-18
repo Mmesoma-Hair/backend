@@ -42,25 +42,88 @@ def _user_telegram(user: Any) -> str | None:
     return profile.telegram_chat_id if profile.telegram_connected else None
 
 
+_PAYMENT_LABELS = {
+    "paystack": "Paystack",
+    "flutterwave": "Flutterwave",
+    "mock": "Test payment",
+}
+
+
+def _money(currency: str, amount: Any) -> str:
+    return f"{currency} {amount}"
+
+
+def _line_image(line: Any) -> str:
+    """A product image URL for an order line (variant image → product primary)."""
+    from apps.catalog.images import image_urls
+
+    variant = getattr(line, "variant", None)
+    if variant is None:
+        return ""
+    try:
+        variant_imgs = list(variant.images.all())
+        if variant_imgs:
+            return image_urls(variant_imgs[0].public_id)["card"]
+        product_imgs = [i for i in variant.product.images.all() if i.variant_id is None]
+        chosen = next((i for i in product_imgs if i.is_primary), None) or (
+            product_imgs[0] if product_imgs else None
+        )
+        return image_urls(chosen.public_id)["card"] if chosen else ""
+    except Exception:  # noqa: BLE001 - imagery must never block a notification
+        return ""
+
+
+def _shipping_address(order: Any) -> dict[str, str]:
+    return {
+        "name": order.ship_name,
+        "line1": order.ship_line1,
+        "line2": order.ship_line2,
+        "city": order.ship_city,
+        "region": order.ship_region,
+        "postal_code": order.ship_postal_code,
+        "country": order.ship_country,
+        "phone": order.ship_phone,
+    }
+
+
 def _order_context(order: Any) -> dict[str, Any]:
     frontend = base_context()["frontend_url"]
-    lines = list(order.lines.all())
+    cur = order.currency
+    lines = list(
+        order.lines.select_related("variant", "variant__product").prefetch_related(
+            "variant__images", "variant__product__images"
+        )
+    )
+    payment = order.payments.order_by("-created_at").first()
+    discount = order.discount_charged or 0
     return {
         "order_number": order.number,
-        "order_total": f"{order.currency} {order.total_charged}",
         "order_status": order.status,
+        "order_date": order.created_at.strftime("%B %d, %Y"),
+        "currency": cur,
         "items": [
             {
                 "title": ln.title,
+                "sku": ln.sku,
                 "quantity": ln.quantity,
-                "line_total": f"{order.currency} {ln.line_total_charged}",
+                "unit_price": _money(cur, ln.unit_price_charged),
+                "line_total": _money(cur, ln.line_total_charged),
+                "image": _line_image(ln),
             }
             for ln in lines
         ],
         "items_count": sum(ln.quantity for ln in lines),
+        "subtotal": _money(cur, order.subtotal_charged),
+        "discount": _money(cur, discount) if discount else "",
+        "discount_codes": ", ".join(order.coupon_codes) if order.coupon_codes else "",
+        "order_total": _money(cur, order.total_charged),
+        "customer_name": order.contact_name or order.ship_name,
         "contact_email": order.contact_email,
         "paid_by": order.payer_email or (order.paid_by_user.email if order.paid_by_user_id else ""),
-        "order_url": f"{frontend}/orders/{order.number}",
+        "payment_method": _PAYMENT_LABELS.get(payment.provider, payment.provider) if payment else "",
+        "shipping": _shipping_address(order),
+        "has_shipping": bool(order.ship_line1),
+        "order_url": f"{frontend}/account/orders",
     }
 
 
@@ -163,4 +226,29 @@ def on_shipment_shipped(order: Any, shipment: Any) -> None:
     except Exception:  # noqa: BLE001
         logger.exception(
             "on_shipment_shipped notifications failed for %s", getattr(shipment, "id", "?")
+        )
+
+
+def on_order_cancelled(order: Any) -> None:
+    """Order cancelled or refunded — email the owner + payer with full details."""
+    try:
+        from apps.orders.models import OrderStatus
+
+        is_refund = order.status == OrderStatus.REFUNDED
+        ctx = {
+            **_order_context(order),
+            "is_refund": is_refund,
+            "cancel_word": "refunded" if is_refund else "cancelled",
+        }
+        dispatch(
+            events.ORDER_CANCELLED,
+            context=ctx,
+            dedupe_key=f"order_cancelled:{order.id}:{order.status}",
+            email_to=_order_email_recipients(order),
+            telegram_chat_id=_user_telegram(order.owner),
+            user=order.owner,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception(
+            "on_order_cancelled notifications failed for %s", getattr(order, "number", "?")
         )

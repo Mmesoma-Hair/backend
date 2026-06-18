@@ -35,6 +35,10 @@ def transition(order: Order, target: str, *, save: bool = True) -> Order:
     order.status = target
     if save:
         order.save(update_fields=["status", "updated_at"])
+    if target in (OrderStatus.CANCELLED, OrderStatus.REFUNDED):
+        from apps.notifications.notify import on_order_cancelled
+
+        on_order_cancelled(order)
     return order
 
 

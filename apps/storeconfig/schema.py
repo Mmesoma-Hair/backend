@@ -37,6 +37,8 @@ class SettingSpec:
     description: str = ""
     # Optional extra validation, raising ValidationError on bad input.
     validator: Callable[[Any], None] | None = field(default=None, compare=False)
+    # Secret (e.g. an API key): never returned by the admin API, only "is set".
+    secret: bool = False
 
     def coerce(self, value: Any) -> Any:
         """Coerce a raw (likely JSON/string) value into the declared type."""
@@ -83,6 +85,11 @@ def _currency_list(value: Any) -> None:
 def _non_negative_decimal(value: Any) -> None:
     if Decimal(str(value)) < 0:
         raise ValidationError("Must be zero or positive.")
+
+
+def _payment_provider(value: Any) -> None:
+    if str(value) not in {"mock", "paystack", "flutterwave"}:
+        raise ValidationError("Must be one of: mock, paystack, flutterwave.")
 
 
 # --- the registry -----------------------------------------------------------
@@ -212,6 +219,71 @@ SETTINGS: dict[str, SettingSpec] = {
         SettingSpec(
             "content.announcement", "content", TEXT, "", "Site-wide announcement banner text."
         ),
+        # Homepage hero (all admin-controlled)
+        SettingSpec(
+            "hero.badge", "hero", STRING, "New season · 2026 collection", "Small pill above the headline."
+        ),
+        SettingSpec(
+            "hero.headline", "hero", STRING, "Shop the world, pay your way.", "Hero headline."
+        ),
+        SettingSpec(
+            "hero.subtext",
+            "hero",
+            TEXT,
+            "Curated products, live multi-currency pricing, and a checkout you can even share with a friend.",
+            "Hero supporting paragraph.",
+        ),
+        SettingSpec("hero.cta_primary_label", "hero", STRING, "Shop now", "Primary button label."),
+        SettingSpec("hero.cta_primary_href", "hero", STRING, "/catalog", "Primary button link."),
+        SettingSpec(
+            "hero.cta_secondary_label", "hero", STRING, "Explore apparel", "Secondary button label."
+        ),
+        SettingSpec(
+            "hero.cta_secondary_href",
+            "hero",
+            STRING,
+            "/catalog?category=apparel",
+            "Secondary button link.",
+        ),
+        SettingSpec(
+            "hero.background_url", "hero", STRING, "", "Background image URL (full URL)."
+        ),
+        SettingSpec(
+            "hero.overlay_opacity",
+            "hero",
+            INTEGER,
+            60,
+            "Brand overlay opacity over the background, 0–100 (higher = more tint).",
+        ),
+        SettingSpec(
+            "hero.side_images",
+            "hero",
+            JSON,
+            [],
+            "Up to 3 image URLs shown in the hero side stack.",
+        ),
+        # Payments — managed from the admin Payments page (secrets masked).
+        SettingSpec(
+            "payments.provider", "payments", STRING, "mock", "Active gateway.", _payment_provider
+        ),
+        SettingSpec(
+            "payments.paystack_secret_key", "payments", STRING, "", "Paystack secret key.",
+            secret=True,
+        ),
+        SettingSpec(
+            "payments.paystack_public_key", "payments", STRING, "", "Paystack public key."
+        ),
+        SettingSpec(
+            "payments.flutterwave_secret_key", "payments", STRING, "", "Flutterwave secret key.",
+            secret=True,
+        ),
+        SettingSpec(
+            "payments.flutterwave_public_key", "payments", STRING, "", "Flutterwave public key."
+        ),
+        SettingSpec(
+            "payments.flutterwave_secret_hash", "payments", STRING, "",
+            "Flutterwave webhook secret hash (must match the dashboard).", secret=True,
+        ),
     )
 }
 
@@ -230,6 +302,16 @@ PUBLIC_KEYS: frozenset[str] = frozenset(
         "features.guest_payers",
         "features.guest_checkout",
         "content.announcement",
+        "hero.badge",
+        "hero.headline",
+        "hero.subtext",
+        "hero.cta_primary_label",
+        "hero.cta_primary_href",
+        "hero.cta_secondary_label",
+        "hero.cta_secondary_href",
+        "hero.background_url",
+        "hero.overlay_opacity",
+        "hero.side_images",
     }
 )
 
