@@ -21,19 +21,18 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "."
           target: "~/nasuru-api"
+          # Don't clobber the server-only .env (it isn't in the repo anyway).
+          overwrite: true
 
-      - name: Run remote commands
+      - name: Install, migrate and restart
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SERVER_IP }}
           username: prime
           key: ${{ secrets.SSH_KEY }}
+          # deploy.sh exports config.settings.prod, installs (frozen, no dev),
+          # migrates, collects static and restarts the services. Keeping the
+          # logic in one tested script avoids settings-module drift here.
           script: |
-            cd ~/nasuru-api
-            export PATH="$HOME/.local/bin:$PATH"
-            uv sync --no-dev
-            uv run python manage.py migrate --noinput
-            uv run python manage.py collectstatic --noinput
-            sudo systemctl daemon-reload
-            sudo systemctl restart gunicorn celery-worker celery-beat
+            cd ~/nasuru-api && bash deploy/deploy.sh
 

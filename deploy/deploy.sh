@@ -13,9 +13,15 @@ export DJANGO_SETTINGS_MODULE=config.settings.prod
 
 cd "$APP_DIR"
 
-echo "==> Fetching latest code (origin/main)"
-git fetch --all --prune
-git reset --hard origin/main
+# Pull from git when a remote is reachable (deploy-key setups); otherwise assume
+# the code was already delivered to disk (the scp-based CI workflow does this).
+if git rev-parse --git-dir >/dev/null 2>&1 && git ls-remote origin >/dev/null 2>&1; then
+  echo "==> Fetching latest code (origin/main)"
+  git fetch --all --prune
+  git reset --hard origin/main
+else
+  echo "==> No reachable git remote; using code already on disk"
+fi
 
 echo "==> Installing dependencies (frozen, no dev)"
 uv sync --frozen --no-dev
