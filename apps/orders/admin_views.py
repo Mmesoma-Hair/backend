@@ -16,12 +16,40 @@ from apps.common.audit import record_audit
 from apps.common.models import AuditLog
 
 from . import services
-from .models import Order, OrderStatus
+from .models import Order, OrderInquiry, OrderStatus
 from .serializers import OrderSerializer
 
 
 class TransitionSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=OrderStatus.choices)
+
+
+class OrderInquirySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderInquiry
+        fields = (
+            "id",
+            "channel",
+            "context",
+            "customer_name",
+            "customer_phone",
+            "note",
+            "summary",
+            "delivered_to_ops",
+            "created_at",
+        )
+
+
+class OrderInquiryAdminViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    """Read-only 'chat to order' leads for the admin to follow up on."""
+
+    permission_classes = [IsAdminRole]
+    queryset = OrderInquiry.objects.all()
+    serializer_class = OrderInquirySerializer
+    filterset_fields = ["channel", "context"]
+    search_fields = ["customer_name", "customer_phone", "summary"]
 
 
 class OrderAdminViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):

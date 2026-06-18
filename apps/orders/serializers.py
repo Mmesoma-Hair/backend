@@ -111,3 +111,20 @@ class SharedCheckoutSerializer(serializers.Serializer):
     currency = serializers.CharField(required=False, allow_blank=True)
     payer = ContactSerializer(required=False)
     shipping = ShippingSerializer(required=False)  # only honoured if owner allows it
+
+
+class OrderChatSerializer(serializers.Serializer):
+    """Input for the 'chat to order' button (product / cart / checkout)."""
+
+    channel = serializers.ChoiceField(choices=["telegram", "whatsapp", "call"])
+    context = serializers.ChoiceField(choices=["product", "cart", "checkout"])
+    variant = serializers.UUIDField(required=False, allow_null=True)
+    quantity = serializers.IntegerField(required=False, default=1, min_value=1)
+    customer_name = serializers.CharField(required=False, allow_blank=True, default="")
+    customer_phone = serializers.CharField(required=False, allow_blank=True, default="")
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate(self, attrs: dict) -> dict:
+        if attrs["context"] == "product" and not attrs.get("variant"):
+            raise serializers.ValidationError("A variant is required for a product inquiry.")
+        return attrs

@@ -18,7 +18,12 @@ from apps.common.exceptions import DomainError
 
 from . import services
 from .models import Order
-from .serializers import CheckoutSerializer, OrderSerializer, SharedCheckoutSerializer
+from .serializers import (
+    CheckoutSerializer,
+    OrderChatSerializer,
+    OrderSerializer,
+    SharedCheckoutSerializer,
+)
 
 
 def _idempotency_key(request: Request) -> str:
@@ -149,6 +154,52 @@ class SharedCheckoutView(APIView):
             payer_name=payer.get("name", ""),
         )
         return Response(_order_payload(order), status=status.HTTP_201_CREATED)
+
+
+class OrderChatView(APIView):
+    """Chat-to-order: record a lead, push it to ops Telegram, return deep links."""
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(request=OrderChatSerializer, responses={200: dict}, tags=["checkout"])
+    def post(self, request: Request) -> Response:
+        from apps.catalog.models import Variant
+
+        from . import inquiries
+
+        serializer = OrderChatSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        ctx = data["context"]
+
+        variant = None
+        cart = None
+        if ctx == "product":
+            variant = (
+                Variant.objects.filter(id=data["variant"], is_active=True)
+                .select_related("product")
+                .first()
+            )
+            if variant is None:
+                raise DomainError("Product not found.", code="not_found")
+        else:
+            cart = _current_cart(request)
+            if cart is None or not cart.lines.exists():
+                raise DomainError("Your cart is empty.", code="empty_cart")
+
+        user = request.user if request.user and request.user.is_authenticated else None
+        _inquiry, summary = inquiries.create_inquiry(
+            channel=data["channel"],
+            context=ctx,
+            variant=variant,
+            quantity=data.get("quantity", 1),
+            cart=cart,
+            customer_name=data.get("customer_name", ""),
+            customer_phone=data.get("customer_phone", ""),
+            note=data.get("note", ""),
+            user=user,
+        )
+        return Response({"links": inquiries.channel_links(summary), "message": summary})
 
 
 class OrderHistoryView(APIView):

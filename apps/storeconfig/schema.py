@@ -264,6 +264,42 @@ SETTINGS: dict[str, SettingSpec] = {
             [],
             "Up to 3 image URLs shown in the hero side stack.",
         ),
+        # Chat-to-order — direct customers to Telegram / WhatsApp / phone.
+        SettingSpec(
+            "order_chat.enabled",
+            "ordering",
+            BOOLEAN,
+            False,
+            "Show a 'Chat to order' button on products, cart and checkout.",
+        ),
+        SettingSpec(
+            "order_chat.telegram_url",
+            "ordering",
+            STRING,
+            "",
+            "Telegram chat link to direct customers to (e.g. https://t.me/yourhandle).",
+        ),
+        SettingSpec(
+            "order_chat.whatsapp_number",
+            "ordering",
+            STRING,
+            "",
+            "WhatsApp number in international format, digits only (e.g. 2348012345678).",
+        ),
+        SettingSpec(
+            "order_chat.phone_number",
+            "ordering",
+            STRING,
+            "",
+            "Phone number for the 'Call to order' option (e.g. +2348012345678).",
+        ),
+        SettingSpec(
+            "order_chat.note",
+            "ordering",
+            STRING,
+            "Chat with us to place your order.",
+            "Short prompt shown next to the order button.",
+        ),
         # Payments — managed from the admin Payments page (secrets masked).
         SettingSpec(
             "payments.provider", "payments", STRING, "mock", "Active gateway.", _payment_provider
@@ -324,6 +360,11 @@ PUBLIC_KEYS: frozenset[str] = frozenset(
         "hero.background_url",
         "hero.overlay_opacity",
         "hero.side_images",
+        "order_chat.enabled",
+        "order_chat.telegram_url",
+        "order_chat.whatsapp_number",
+        "order_chat.phone_number",
+        "order_chat.note",
     }
 )
 

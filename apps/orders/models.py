@@ -118,3 +118,45 @@ class OrderLine(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.sku} x{self.quantity}"
+
+
+class OrderInquiry(BaseModel):
+    """A 'chat to order' lead — captured when a shopper taps the order button.
+
+    Persisted so a lead is never lost even if the store's Telegram bot isn't
+    configured (in which case the real-time push is skipped, but the inquiry is
+    still here for the admin to follow up). ``summary`` is the exact text we sent
+    / pre-filled for the chosen channel.
+    """
+
+    class Channel(models.TextChoices):
+        TELEGRAM = "telegram", "Telegram"
+        WHATSAPP = "whatsapp", "WhatsApp"
+        CALL = "call", "Call"
+
+    class Context(models.TextChoices):
+        PRODUCT = "product", "Product"
+        CART = "cart", "Cart"
+        CHECKOUT = "checkout", "Checkout"
+
+    channel = models.CharField(max_length=20, choices=Channel.choices)
+    context = models.CharField(max_length=20, choices=Context.choices)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="order_inquiries",
+    )
+    customer_name = models.CharField(max_length=255, blank=True)
+    customer_phone = models.CharField(max_length=40, blank=True)
+    note = models.TextField(blank=True)
+    summary = models.TextField(blank=True)
+    delivered_to_ops = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name_plural = "order inquiries"
+
+    def __str__(self) -> str:
+        return f"{self.channel} · {self.context} · {self.created_at:%Y-%m-%d}"
