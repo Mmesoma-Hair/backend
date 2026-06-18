@@ -1,0 +1,22 @@
+[Unit]
+Description=IdealCommerce Celery worker (nasuru-api)
+After=network.target redis-server.service postgresql.service
+Wants=redis-server.service postgresql.service
+
+[Service]
+Type=simple
+User=prime
+Group=www-data
+WorkingDirectory=/home/prime/nasuru-api
+Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
+ExecStart=/home/prime/nasuru-api/.venv/bin/celery -A config worker \
+    --loglevel=info \
+    --concurrency=2 \
+    --max-tasks-per-child=200
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

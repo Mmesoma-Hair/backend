@@ -1,0 +1,11 @@
+# /etc/sudoers.d/prime-deploy  (install with mode 0440, validate with visudo -c)
+# Lets the deploy user manage ONLY the app services without a password, so
+# unattended CI/CD deploys work without granting broad root access.
+prime ALL=(root) NOPASSWD: /usr/bin/systemctl daemon-reload
+prime ALL=(root) NOPASSWD: /usr/bin/systemctl restart gunicorn celery-worker celery-beat
+prime ALL=(root) NOPASSWD: /usr/bin/systemctl restart gunicorn
+prime ALL=(root) NOPASSWD: /usr/bin/systemctl restart celery-worker
+prime ALL=(root) NOPASSWD: /usr/bin/systemctl restart celery-beat
+prime ALL=(root) NOPASSWD: /usr/bin/systemctl reload gunicorn
+prime ALL=(root) NOPASSWD: /usr/bin/systemctl status gunicorn celery-worker celery-beat
+prime ALL=(root) NOPASSWD: /usr/bin/systemctl is-active gunicorn celery-worker celery-beat

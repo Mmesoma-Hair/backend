@@ -98,8 +98,13 @@ def test_paystack_webhook_marks_order_paid_and_is_idempotent(setup, monkeypatch)
     body = json.dumps(
         {
             "event": "charge.success",
-            "data": {"id": 12345, "reference": ref, "status": "success",
-                     "amount": cents, "currency": "USD"},
+            "data": {
+                "id": 12345,
+                "reference": ref,
+                "status": "success",
+                "amount": cents,
+                "currency": "USD",
+            },
         }
     ).encode()
     sig = hmac.new(b"sk_test_x", body, hashlib.sha512).hexdigest()
@@ -113,8 +118,12 @@ def test_paystack_webhook_marks_order_paid_and_is_idempotent(setup, monkeypatch)
     reference = ref
     monkeypatch.setattr(providers.requests, "get", fake_get)
     with override_settings(PAYMENT_PROVIDER="paystack", PAYSTACK_SECRET_KEY="sk_test_x"):
-        first = payment_services.process_webhook(provider_name="paystack", payload=body, signature=sig)
-        second = payment_services.process_webhook(provider_name="paystack", payload=body, signature=sig)
+        first = payment_services.process_webhook(
+            provider_name="paystack", payload=body, signature=sig
+        )
+        second = payment_services.process_webhook(
+            provider_name="paystack", payload=body, signature=sig
+        )
 
     order.refresh_from_db()
     payment.refresh_from_db()
@@ -129,7 +138,9 @@ def test_paystack_bad_signature_rejected(setup) -> None:
     body = json.dumps({"event": "charge.success", "data": {"id": 1, "reference": "r"}}).encode()
     with override_settings(PAYMENT_PROVIDER="paystack", PAYSTACK_SECRET_KEY="sk_test_x"):
         with pytest.raises(WebhookSignatureError):
-            payment_services.process_webhook(provider_name="paystack", payload=body, signature="bad")
+            payment_services.process_webhook(
+                provider_name="paystack", payload=body, signature="bad"
+            )
 
 
 def test_paystack_underpayment_not_applied(setup, monkeypatch) -> None:
@@ -138,8 +149,16 @@ def test_paystack_underpayment_not_applied(setup, monkeypatch) -> None:
     # The webhook *claims* the full amount, but the gateway's own verify endpoint
     # (source of truth) reports a smaller amount → must not mark paid.
     body = json.dumps(
-        {"event": "charge.success",
-         "data": {"id": 7, "reference": ref, "status": "success", "amount": 2000, "currency": "USD"}}
+        {
+            "event": "charge.success",
+            "data": {
+                "id": 7,
+                "reference": ref,
+                "status": "success",
+                "amount": 2000,
+                "currency": "USD",
+            },
+        }
     ).encode()
     sig = hmac.new(b"sk_test_x", body, hashlib.sha512).hexdigest()
 
@@ -150,7 +169,9 @@ def test_paystack_underpayment_not_applied(setup, monkeypatch) -> None:
 
     monkeypatch.setattr(providers.requests, "get", fake_get)
     with override_settings(PAYMENT_PROVIDER="paystack", PAYSTACK_SECRET_KEY="sk_test_x"):
-        res = payment_services.process_webhook(provider_name="paystack", payload=body, signature=sig)
+        res = payment_services.process_webhook(
+            provider_name="paystack", payload=body, signature=sig
+        )
 
     order.refresh_from_db()
     assert res["status"] == "unverified"
@@ -190,9 +211,16 @@ def test_flutterwave_webhook_marks_order_paid(setup, monkeypatch) -> None:
     ref = payment.intent_id
     amount = float(order.total_charged)
     body = json.dumps(
-        {"event": "charge.completed",
-         "data": {"id": 999, "tx_ref": ref, "status": "successful",
-                  "amount": amount, "currency": "USD"}}
+        {
+            "event": "charge.completed",
+            "data": {
+                "id": 999,
+                "tx_ref": ref,
+                "status": "successful",
+                "amount": amount,
+                "currency": "USD",
+            },
+        }
     ).encode()
 
     def fake_get(url, headers=None, timeout=None, params=None):

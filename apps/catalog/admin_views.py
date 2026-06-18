@@ -94,11 +94,7 @@ class ProductImageAdminViewSet(_AdminModelViewSet):
 
 
 class ProductAdminViewSet(_AdminModelViewSet):
-    queryset = (
-        Product.objects.all()
-        .order_by("-created_at")
-        .prefetch_related("images", "variants")
-    )
+    queryset = Product.objects.all().order_by("-created_at").prefetch_related("images", "variants")
     serializer_class = ProductAdminSerializer
     filterset_fields = ["category", "brand", "is_active"]
     search_fields = ["title", "slug", "short_id"]
@@ -121,6 +117,7 @@ class ProductAdminViewSet(_AdminModelViewSet):
             new_category=d.get("new_category", ""),
             brand_id=d.get("brand"),
             fulfillment_type=d["fulfillment_type"],
+            supplier_id=d.get("supplier"),
             is_active=d["is_active"],
             image_public_id=d.get("image_public_id", ""),
             kind=d["kind"],

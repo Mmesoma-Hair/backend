@@ -1,0 +1,31 @@
+[Unit]
+Description=IdealCommerce API (gunicorn / nasuru-api)
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+Type=notify
+User=prime
+Group=www-data
+WorkingDirectory=/home/prime/nasuru-api
+# Settings come from config.settings.prod; the rest of the env is loaded from
+# the project .env by python-dotenv (see config/settings/base.py).
+Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
+# Socket lives in /run/nasuru-api (created by systemd, owned prime:www-data).
+RuntimeDirectory=nasuru-api
+RuntimeDirectoryMode=0750
+ExecStart=/home/prime/nasuru-api/.venv/bin/gunicorn config.wsgi:application \
+    --name nasuru-api \
+    --workers 3 \
+    --timeout 60 \
+    --umask 007 \
+    --bind unix:/run/nasuru-api/gunicorn.sock \
+    --access-logfile - \
+    --error-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=3
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

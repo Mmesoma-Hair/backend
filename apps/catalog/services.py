@@ -13,7 +13,7 @@ from __future__ import annotations
 import itertools
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 from django.conf import settings
 from django.db import transaction
@@ -172,6 +172,7 @@ def create_product_full(
     new_category: str = "",
     brand_id: int | None = None,
     fulfillment_type: str = "internal",
+    supplier_id: Any = None,
     is_active: bool = True,
     image_public_id: str = "",
     kind: str = "simple",
@@ -204,6 +205,11 @@ def create_product_full(
     elif category_id:
         category = Category.objects.filter(id=category_id).first()
     brand = Brand.objects.filter(id=brand_id).first() if brand_id else None
+    supplier = None
+    if supplier_id and fulfillment_type == "dropship":
+        from apps.suppliers.models import Supplier
+
+        supplier = Supplier.objects.filter(id=supplier_id).first()
 
     product = Product.objects.create(
         title=title.strip(),
@@ -211,6 +217,7 @@ def create_product_full(
         category=category,
         brand=brand,
         fulfillment_type=fulfillment_type,
+        supplier=supplier,
         is_active=is_active,
     )
 

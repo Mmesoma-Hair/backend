@@ -1,0 +1,25 @@
+[Unit]
+Description=IdealCommerce Celery beat scheduler (nasuru-api)
+After=network.target redis-server.service postgresql.service
+Wants=redis-server.service postgresql.service
+
+[Service]
+Type=simple
+User=prime
+Group=www-data
+WorkingDirectory=/home/prime/nasuru-api
+Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
+# DatabaseScheduler (django_celery_beat) keeps the schedule in Postgres, so no
+# local schedule file is needed. --pidfile in /run avoids stale-pid issues.
+RuntimeDirectory=nasuru-beat
+ExecStart=/home/prime/nasuru-api/.venv/bin/celery -A config beat \
+    --loglevel=info \
+    --scheduler django_celery_beat.schedulers:DatabaseScheduler \
+    --pidfile=/run/nasuru-beat/beat.pid
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

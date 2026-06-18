@@ -48,4 +48,6 @@ def test_sync_inventory_and_prices_with_custom_adapter(monkeypatch) -> None:
 
     assert services.sync_prices(supplier) == 1
     variant.refresh_from_db()
-    assert variant.price == Decimal("8.50")
+    # Supplier cost is stored; the selling price is cost + the default 50% markup.
+    assert variant.cost_price == Decimal("8.50")
+    assert variant.price == Decimal("12.75")

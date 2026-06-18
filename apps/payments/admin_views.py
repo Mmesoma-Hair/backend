@@ -37,9 +37,7 @@ def _is_set(storeconfig_key: str, env_value: str) -> bool:
 
 
 class PaymentConfigWriteSerializer(serializers.Serializer):
-    provider = serializers.ChoiceField(
-        choices=["mock", "paystack", "flutterwave"], required=False
-    )
+    provider = serializers.ChoiceField(choices=["mock", "paystack", "flutterwave"], required=False)
     paystack_public_key = serializers.CharField(required=False, allow_blank=True)
     paystack_secret_key = serializers.CharField(required=False, allow_blank=True)
     flutterwave_public_key = serializers.CharField(required=False, allow_blank=True)
@@ -48,13 +46,17 @@ class PaymentConfigWriteSerializer(serializers.Serializer):
 
 
 def _config_payload() -> dict:
-    last = WebhookEvent.objects.filter(provider=config.provider_name()).order_by("-created_at").first()
+    last = (
+        WebhookEvent.objects.filter(provider=config.provider_name()).order_by("-created_at").first()
+    )
     return {
         "provider": config.provider_name(),
         "webhook_url": config.webhook_url(),
         # Public keys are returned in full; secrets only as "is set".
         "paystack_public_key": config.paystack_public_key(),
-        "paystack_secret_set": _is_set("payments.paystack_secret_key", config.paystack_secret_key()),
+        "paystack_secret_set": _is_set(
+            "payments.paystack_secret_key", config.paystack_secret_key()
+        ),
         "flutterwave_public_key": config.flutterwave_public_key(),
         "flutterwave_secret_set": _is_set(
             "payments.flutterwave_secret_key", config.flutterwave_secret_key()
@@ -74,7 +76,9 @@ class PaymentConfigView(APIView):
     def get(self, request: Request) -> Response:
         return Response(_config_payload())
 
-    @extend_schema(request=PaymentConfigWriteSerializer, responses={200: dict}, tags=["payments-admin"])
+    @extend_schema(
+        request=PaymentConfigWriteSerializer, responses={200: dict}, tags=["payments-admin"]
+    )
     def patch(self, request: Request) -> Response:
         serializer = PaymentConfigWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

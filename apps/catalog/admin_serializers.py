@@ -59,21 +59,20 @@ class ProductAdminSerializer(serializers.ModelSerializer):
             "category",
             "brand",
             "fulfillment_type",
+            "supplier",
             "is_active",
             "primary_image",
             "variant_count",
             "price_from",
         )
         read_only_fields = ("short_id", "primary_image", "variant_count", "price_from")
-        extra_kwargs = {"slug": {"required": False}}
+        extra_kwargs = {"slug": {"required": False}, "supplier": {"required": False}}
 
     def get_primary_image(self, obj: Product) -> str | None:
         from .images import image_urls
 
         images = [i for i in obj.images.all() if i.variant_id is None]
-        chosen = next((i for i in images if i.is_primary), None) or (
-            images[0] if images else None
-        )
+        chosen = next((i for i in images if i.is_primary), None) or (images[0] if images else None)
         return image_urls(chosen.public_id)["card"] if chosen else None
 
     def get_variant_count(self, obj: Product) -> int:
@@ -109,6 +108,7 @@ class VariantAdminSerializer(serializers.ModelSerializer):
             "product",
             "sku",
             "price",
+            "cost_price",
             "is_active",
             "is_default",
             "weight_grams",
@@ -157,6 +157,7 @@ class ProductCreateSerializer(serializers.Serializer):
     fulfillment_type = serializers.ChoiceField(
         choices=[c[0] for c in FulfillmentType.choices], default=FulfillmentType.INTERNAL
     )
+    supplier = serializers.IntegerField(required=False, allow_null=True)
     is_active = serializers.BooleanField(required=False, default=True)
     image_public_id = serializers.CharField(required=False, allow_blank=True, default="")
 

@@ -221,7 +221,11 @@ SETTINGS: dict[str, SettingSpec] = {
         ),
         # Homepage hero (all admin-controlled)
         SettingSpec(
-            "hero.badge", "hero", STRING, "New season · 2026 collection", "Small pill above the headline."
+            "hero.badge",
+            "hero",
+            STRING,
+            "New season · 2026 collection",
+            "Small pill above the headline.",
         ),
         SettingSpec(
             "hero.headline", "hero", STRING, "Shop the world, pay your way.", "Hero headline."
@@ -245,9 +249,7 @@ SETTINGS: dict[str, SettingSpec] = {
             "/catalog?category=apparel",
             "Secondary button link.",
         ),
-        SettingSpec(
-            "hero.background_url", "hero", STRING, "", "Background image URL (full URL)."
-        ),
+        SettingSpec("hero.background_url", "hero", STRING, "", "Background image URL (full URL)."),
         SettingSpec(
             "hero.overlay_opacity",
             "hero",
@@ -267,22 +269,32 @@ SETTINGS: dict[str, SettingSpec] = {
             "payments.provider", "payments", STRING, "mock", "Active gateway.", _payment_provider
         ),
         SettingSpec(
-            "payments.paystack_secret_key", "payments", STRING, "", "Paystack secret key.",
+            "payments.paystack_secret_key",
+            "payments",
+            STRING,
+            "",
+            "Paystack secret key.",
             secret=True,
         ),
+        SettingSpec("payments.paystack_public_key", "payments", STRING, "", "Paystack public key."),
         SettingSpec(
-            "payments.paystack_public_key", "payments", STRING, "", "Paystack public key."
-        ),
-        SettingSpec(
-            "payments.flutterwave_secret_key", "payments", STRING, "", "Flutterwave secret key.",
+            "payments.flutterwave_secret_key",
+            "payments",
+            STRING,
+            "",
+            "Flutterwave secret key.",
             secret=True,
         ),
         SettingSpec(
             "payments.flutterwave_public_key", "payments", STRING, "", "Flutterwave public key."
         ),
         SettingSpec(
-            "payments.flutterwave_secret_hash", "payments", STRING, "",
-            "Flutterwave webhook secret hash (must match the dashboard).", secret=True,
+            "payments.flutterwave_secret_hash",
+            "payments",
+            STRING,
+            "",
+            "Flutterwave webhook secret hash (must match the dashboard).",
+            secret=True,
         ),
     )
 }

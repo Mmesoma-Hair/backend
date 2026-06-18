@@ -23,6 +23,9 @@ class Supplier(TimeStampedModel):
     api_base_url = models.URLField(blank=True)
     api_key = models.CharField(max_length=255, blank=True)
     sync_cadence_minutes = models.PositiveIntegerField(default=60)
+    # Profit margin added on top of the supplier's cost when syncing prices.
+    # e.g. 50 → a 10.00 cost item is sold for 15.00.
+    markup_percent = models.DecimalField(max_digits=6, decimal_places=2, default=50)
 
     class Meta:
         ordering = ("name",)

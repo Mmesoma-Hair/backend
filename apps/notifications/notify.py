@@ -120,7 +120,9 @@ def _order_context(order: Any) -> dict[str, Any]:
         "customer_name": order.contact_name or order.ship_name,
         "contact_email": order.contact_email,
         "paid_by": order.payer_email or (order.paid_by_user.email if order.paid_by_user_id else ""),
-        "payment_method": _PAYMENT_LABELS.get(payment.provider, payment.provider) if payment else "",
+        "payment_method": (
+            _PAYMENT_LABELS.get(payment.provider, payment.provider) if payment else ""
+        ),
         "shipping": _shipping_address(order),
         "has_shipping": bool(order.ship_line1),
         "order_url": f"{frontend}/account/orders",

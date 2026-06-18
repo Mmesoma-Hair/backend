@@ -155,6 +155,9 @@ class Variant(BaseModel):
     sku = models.CharField(max_length=64, unique=True)
     # Base-currency price; the currency module converts for display/checkout.
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    # What we pay the supplier (base currency). For dropship variants this is set
+    # by supplier sync; the selling price above = cost + the supplier's markup.
+    cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     options = models.ManyToManyField(OptionValue, through="VariantOption", related_name="variants")
     # Deterministic fingerprint of the option-value combination, used to enforce
     # uniqueness within a product at the DB level (empty for a default variant).
