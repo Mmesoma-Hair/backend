@@ -9,10 +9,11 @@ User=prime
 Group=www-data
 WorkingDirectory=/home/prime/nasuru-api
 Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
+# --concurrency=1 keeps memory tiny on a 512MB host; raise on a bigger box.
 ExecStart=/home/prime/nasuru-api/.venv/bin/celery -A config worker \
     --loglevel=info \
-    --concurrency=2 \
-    --max-tasks-per-child=200
+    --concurrency=1 \
+    --max-tasks-per-child=100
 Restart=always
 RestartSec=5
 KillMode=mixed

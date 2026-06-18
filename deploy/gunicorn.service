@@ -14,9 +14,13 @@ Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
 # Socket lives in /run/nasuru-api (created by systemd, owned prime:www-data).
 RuntimeDirectory=nasuru-api
 RuntimeDirectoryMode=0750
+# Tuned for a small (512MB) host: 2 threaded workers keep memory low while
+# still handling concurrent I/O-bound requests. Bump --workers on a bigger box.
 ExecStart=/home/prime/nasuru-api/.venv/bin/gunicorn config.wsgi:application \
     --name nasuru-api \
-    --workers 3 \
+    --worker-class gthread \
+    --workers 2 \
+    --threads 4 \
     --timeout 60 \
     --umask 007 \
     --bind unix:/run/nasuru-api/gunicorn.sock \
