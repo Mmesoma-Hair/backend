@@ -85,6 +85,8 @@ class CheckoutView(APIView):
             idempotency_key=key,
             currency=data.get("currency") or None,
             shipping=data.get("shipping") or None,
+            address_id=data.get("address_id"),
+            save_address=data.get("save_address", False),
             owner_user=user,
             payer_user=user,
             payer_email=contact.get("email", ""),

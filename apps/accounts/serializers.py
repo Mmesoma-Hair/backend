@@ -7,7 +7,27 @@ from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer as BaseTokenObtainPairSerializer,
 )
 
-from .models import Profile, User
+from .models import Address, Profile, User
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = (
+            "id",
+            "label",
+            "name",
+            "line1",
+            "line2",
+            "city",
+            "region",
+            "postal_code",
+            "country",
+            "phone",
+            "is_default",
+            "created_at",
+        )
+        read_only_fields = ("id", "created_at")
 
 
 class ProfileSerializer(serializers.ModelSerializer):

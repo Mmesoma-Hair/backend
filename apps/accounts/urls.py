@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
 from .views import (
+    AddressViewSet,
     ChangePasswordView,
     EmailVerifyConfirmView,
     EmailVerifyRequestView,
@@ -15,7 +17,11 @@ from .views import (
     RegisterView,
 )
 
+router = DefaultRouter()
+router.register("addresses", AddressViewSet, basename="address")
+
 urlpatterns = [
+    path("", include(router.urls)),
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("refresh/", RefreshView.as_view(), name="token-refresh"),

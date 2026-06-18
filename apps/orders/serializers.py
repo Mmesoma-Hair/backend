@@ -101,6 +101,10 @@ class CheckoutSerializer(serializers.Serializer):
     currency = serializers.CharField(required=False, allow_blank=True)
     shipping = ShippingSerializer(required=False)
     contact = ContactSerializer(required=False)
+    # Use a saved address book entry instead of inline shipping.
+    address_id = serializers.UUIDField(required=False, allow_null=True)
+    # Save the inline shipping address to the signed-in user's address book.
+    save_address = serializers.BooleanField(required=False, default=False)
 
 
 class SharedCheckoutSerializer(serializers.Serializer):

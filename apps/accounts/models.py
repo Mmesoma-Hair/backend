@@ -117,3 +117,50 @@ class Profile(TimeStampedModel):
     @property
     def telegram_connected(self) -> bool:
         return bool(self.telegram_chat_id and self.telegram_bot_token)
+
+
+class Address(UUIDModel, TimeStampedModel):
+    """A reusable shipping address saved to a user's account ("address book").
+
+    Mirrors the order's ``ship_*`` fields so checkout can copy a chosen address
+    onto the order. One address per user can be the default.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="addresses")
+    label = models.CharField(max_length=60, blank=True, help_text="e.g. Home, Office")
+    name = models.CharField(max_length=255)
+    line1 = models.CharField(max_length=255)
+    line2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=120)
+    region = models.CharField(max_length=120, blank=True)
+    postal_code = models.CharField(max_length=32, blank=True)
+    country = models.CharField(max_length=2)
+    phone = models.CharField(max_length=32, blank=True)
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ("-is_default", "-created_at")
+        constraints = [
+            # At most one default address per user (NULL-free partial unique).
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(is_default=True),
+                name="uniq_default_address_per_user",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.label or self.name} <{self.user.email}>"
+
+    def as_shipping(self) -> dict[str, str]:
+        """Shape consumed by the checkout service / order ``ship_*`` fields."""
+        return {
+            "name": self.name,
+            "line1": self.line1,
+            "line2": self.line2,
+            "city": self.city,
+            "region": self.region,
+            "postal_code": self.postal_code,
+            "country": self.country,
+            "phone": self.phone,
+        }

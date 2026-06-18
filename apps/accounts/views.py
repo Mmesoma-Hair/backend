@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from django.db import transaction
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -14,7 +16,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import services
 from .emails import send_password_reset_email
+from .models import Address
 from .serializers import (
+    AddressSerializer,
     ChangePasswordSerializer,
     EmailVerifyConfirmSerializer,
     PasswordResetConfirmSerializer,
@@ -163,3 +167,52 @@ class EmailVerifyConfirmView(APIView):
         serializer.is_valid(raise_exception=True)
         user = services.confirm_email_verification(serializer.validated_data["token"])
         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+
+
+class AddressViewSet(viewsets.ModelViewSet):
+    """The signed-in shopper's saved-address book (CRUD + set-default)."""
+
+    serializer_class = AddressSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):  # type: ignore[override]
+        return Address.objects.filter(user=self.request.user)
+
+    @transaction.atomic
+    def perform_create(self, serializer: AddressSerializer) -> None:
+        user = self.request.user
+        first = not Address.objects.filter(user=user).exists()
+        # First address is the default; or honour an explicit request.
+        make_default = first or serializer.validated_data.get("is_default", False)
+        if make_default:
+            Address.objects.filter(user=user, is_default=True).update(is_default=False)
+        serializer.save(user=user, is_default=make_default)
+
+    @transaction.atomic
+    def perform_update(self, serializer: AddressSerializer) -> None:
+        user = self.request.user
+        if serializer.validated_data.get("is_default"):
+            Address.objects.filter(user=user, is_default=True).exclude(
+                pk=serializer.instance.pk
+            ).update(is_default=False)
+        serializer.save()
+
+    def perform_destroy(self, instance: Address) -> None:
+        was_default = instance.is_default
+        instance.delete()
+        # Promote another address to default so there's always one if possible.
+        if was_default:
+            nxt = Address.objects.filter(user=self.request.user).first()
+            if nxt is not None:
+                nxt.is_default = True
+                nxt.save(update_fields=["is_default"])
+
+    @extend_schema(responses={200: AddressSerializer}, tags=["addresses"])
+    @action(detail=True, methods=["post"], url_path="set-default")
+    @transaction.atomic
+    def set_default(self, request: Request, pk: str | None = None) -> Response:
+        address = self.get_object()
+        Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+        address.is_default = True
+        address.save(update_fields=["is_default"])
+        return Response(AddressSerializer(address).data)

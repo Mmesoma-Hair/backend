@@ -101,6 +101,8 @@ def checkout(
     idempotency_key: str,
     currency: str | None = None,
     shipping: dict[str, Any] | None = None,
+    address_id: Any = None,
+    save_address: bool = False,
     owner_user: Any = None,
     payer_user: Any = None,
     payer_email: str = "",
@@ -164,7 +166,34 @@ def checkout(
         contact_email = contact_email or owner.email
         contact_name = contact_name or owner.full_name
 
+    # Resolve the shipping destination: a chosen saved address wins; otherwise
+    # the inline form (or the cart's stored shipping).
     ship = shipping if shipping else (cart.shipping or {})
+    if address_id and owner is not None:
+        from apps.accounts.models import Address
+
+        saved = Address.objects.filter(id=address_id, user=owner).first()
+        if saved is not None:
+            ship = saved.as_shipping()
+    elif save_address and owner is not None and (ship or {}).get("line1"):
+        # Persist the just-entered address to the owner's address book.
+        from apps.accounts.models import Address
+
+        first = not Address.objects.filter(user=owner).exists()
+        if first:
+            Address.objects.filter(user=owner, is_default=True).update(is_default=False)
+        Address.objects.create(
+            user=owner,
+            name=ship.get("name", ""),
+            line1=ship.get("line1", ""),
+            line2=ship.get("line2", ""),
+            city=ship.get("city", ""),
+            region=ship.get("region", ""),
+            postal_code=ship.get("postal_code", ""),
+            country=ship.get("country", ""),
+            phone=ship.get("phone", ""),
+            is_default=first,
+        )
 
     order = Order.objects.create(
         owner=owner,
