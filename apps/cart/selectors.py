@@ -58,14 +58,14 @@ def validate_cart(cart: Cart) -> list[dict[str, Any]]:
                     "requested": line.quantity,
                 }
             )
-        if variant.price != line.added_unit_price:
+        if variant.effective_price != line.added_unit_price:
             issues.append(
                 {
                     "line": str(line.id),
                     "sku": variant.sku,
                     "code": "price_changed",
                     "was": str(line.added_unit_price),
-                    "now": str(variant.price),
+                    "now": str(variant.effective_price),
                 }
             )
     return issues
@@ -87,7 +87,7 @@ def compute_cart_totals(cart: Cart, *, currency: str | None = None) -> dict[str,
     category_subtotals: dict[int, Decimal] = {}
 
     for line in cart_lines(cart):
-        unit = line.variant.price
+        unit = line.variant.effective_price
         line_base = unit * line.quantity
         subtotal += line_base
         cat_id = line.variant.product.category_id

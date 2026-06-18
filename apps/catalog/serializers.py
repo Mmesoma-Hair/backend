@@ -65,7 +65,16 @@ class VariantSerializer(serializers.ModelSerializer):
     available = serializers.SerializerMethodField()
     in_stock = serializers.SerializerMethodField()
     images = ProductImageSerializer(many=True, read_only=True)
+    # `price`/`price_display` are what the customer pays (after any discount);
+    # `compare_at_display` is the original (struck-through) price when discounted.
+    price = serializers.DecimalField(
+        source="effective_price", max_digits=12, decimal_places=2, read_only=True
+    )
     price_display = serializers.SerializerMethodField()
+    compare_at_display = serializers.SerializerMethodField()
+    discount_percent = serializers.DecimalField(
+        source="product.discount_percent", max_digits=5, decimal_places=2, read_only=True
+    )
 
     class Meta:
         model = Variant
@@ -74,6 +83,8 @@ class VariantSerializer(serializers.ModelSerializer):
             "sku",
             "price",
             "price_display",
+            "compare_at_display",
+            "discount_percent",
             "is_default",
             "options_key",
             "option_value_ids",
@@ -85,7 +96,13 @@ class VariantSerializer(serializers.ModelSerializer):
 
     def get_price_display(self, obj: Variant) -> dict | None:
         currency = _ctx_currency(self)
-        return price_for(obj.price, currency) if currency else None
+        return price_for(obj.effective_price, currency) if currency else None
+
+    def get_compare_at_display(self, obj: Variant) -> dict | None:
+        currency = _ctx_currency(self)
+        if not currency or not obj.is_discounted:
+            return None
+        return price_for(obj.price, currency)
 
     def get_option_value_ids(self, obj: Variant) -> list[int]:
         # Uses prefetched variant_options to avoid an extra query per variant.
@@ -101,8 +118,10 @@ class VariantSerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     brand = BrandSerializer(read_only=True)
-    price_from = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    price_from = serializers.SerializerMethodField()
     price_from_display = serializers.SerializerMethodField()
+    compare_at_from_display = serializers.SerializerMethodField()
+    discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
     primary_image = serializers.SerializerMethodField()
     share_path = serializers.SerializerMethodField()
     has_options = serializers.SerializerMethodField()
@@ -119,11 +138,20 @@ class ProductListSerializer(serializers.ModelSerializer):
             "brand",
             "price_from",
             "price_from_display",
+            "compare_at_from_display",
+            "discount_percent",
             "primary_image",
             "share_path",
             "has_options",
             "default_variant",
         )
+
+    def _orig_price_from(self, obj: Product) -> Any:
+        return getattr(obj, "price_from", None)
+
+    def get_price_from(self, obj: Product) -> str | None:
+        original = self._orig_price_from(obj)
+        return str(obj.apply_discount(original)) if original is not None else None
 
     def get_has_options(self, obj: Product) -> bool:
         return len(obj.option_types.all()) > 0
@@ -138,7 +166,17 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def get_price_from_display(self, obj: Product) -> dict | None:
         currency = _ctx_currency(self)
-        return price_for(getattr(obj, "price_from", None), currency) if currency else None
+        original = self._orig_price_from(obj)
+        if not currency or original is None:
+            return None
+        return price_for(obj.apply_discount(original), currency)
+
+    def get_compare_at_from_display(self, obj: Product) -> dict | None:
+        currency = _ctx_currency(self)
+        original = self._orig_price_from(obj)
+        if not currency or original is None or not obj.is_discounted:
+            return None
+        return price_for(original, currency)
 
     def get_primary_image(self, obj: Product) -> dict[str, Any] | None:
         images = (
@@ -160,6 +198,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     variants = VariantSerializer(many=True, read_only=True)
     images = serializers.SerializerMethodField()
     share_path = serializers.SerializerMethodField()
+    discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
 
     class Meta:
         model = Product
@@ -172,6 +211,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "category",
             "brand",
             "fulfillment_type",
+            "discount_percent",
             "option_types",
             "variants",
             "images",

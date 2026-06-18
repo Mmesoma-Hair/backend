@@ -61,12 +61,17 @@ class ProductAdminSerializer(serializers.ModelSerializer):
             "fulfillment_type",
             "supplier",
             "is_active",
+            "discount_percent",
             "primary_image",
             "variant_count",
             "price_from",
         )
         read_only_fields = ("short_id", "primary_image", "variant_count", "price_from")
-        extra_kwargs = {"slug": {"required": False}, "supplier": {"required": False}}
+        extra_kwargs = {
+            "slug": {"required": False},
+            "supplier": {"required": False},
+            "discount_percent": {"required": False},
+        }
 
     def get_primary_image(self, obj: Product) -> str | None:
         from .images import image_urls
@@ -159,6 +164,9 @@ class ProductCreateSerializer(serializers.Serializer):
     )
     supplier = serializers.IntegerField(required=False, allow_null=True)
     is_active = serializers.BooleanField(required=False, default=True)
+    discount_percent = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, default=0, min_value=0, max_value=100
+    )
     image_public_id = serializers.CharField(required=False, allow_blank=True, default="")
 
     kind = serializers.ChoiceField(choices=["simple", "variable"])

@@ -119,6 +119,7 @@ class ProductAdminViewSet(_AdminModelViewSet):
             fulfillment_type=d["fulfillment_type"],
             supplier_id=d.get("supplier"),
             is_active=d["is_active"],
+            discount_percent=d.get("discount_percent", 0),
             image_public_id=d.get("image_public_id", ""),
             kind=d["kind"],
             sku=d.get("sku"),

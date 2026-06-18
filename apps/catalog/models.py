@@ -17,7 +17,9 @@ default variant, so cart/pricing/stock/orders never branch on "has variants?".
 from __future__ import annotations
 
 import secrets
+from decimal import ROUND_HALF_UP, Decimal
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -92,12 +94,32 @@ class Product(BaseModel):
         related_name="products",
     )
     is_active = models.BooleanField(default=True, db_index=True)
+    # Product-level discount applied to every variant's price (0 = no discount).
+    # The discounted price is what the customer is actually charged; the original
+    # price is shown struck-through in the storefront.
+    discount_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
 
     class Meta:
         ordering = ("-created_at",)
 
     def __str__(self) -> str:
         return self.title
+
+    @property
+    def is_discounted(self) -> bool:
+        return self.discount_percent is not None and self.discount_percent > 0
+
+    def apply_discount(self, amount: Decimal) -> Decimal:
+        """Apply this product's discount to a base amount (2dp, half-up)."""
+        if not self.is_discounted:
+            return amount
+        factor = (Decimal("100") - self.discount_percent) / Decimal("100")
+        return (amount * factor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def save(self, *args: object, **kwargs: object) -> None:
         if not self.slug:
@@ -190,6 +212,15 @@ class Variant(BaseModel):
 
     def __str__(self) -> str:
         return self.sku
+
+    @property
+    def effective_price(self) -> Decimal:
+        """Base-currency price actually charged, after the product discount."""
+        return self.product.apply_discount(self.price)
+
+    @property
+    def is_discounted(self) -> bool:
+        return self.product.is_discounted
 
     @property
     def effective_fulfillment_type(self) -> str:

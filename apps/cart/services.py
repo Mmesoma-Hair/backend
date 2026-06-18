@@ -45,9 +45,11 @@ def add_item(cart: Cart, *, variant_id: str, quantity: int = 1) -> CartLine:
     variant = _active_variant(variant_id)
     line = cart.lines.filter(variant=variant).first()
     if line is None:
-        line = CartLine(cart=cart, variant=variant, quantity=0, added_unit_price=variant.price)
+        line = CartLine(
+            cart=cart, variant=variant, quantity=0, added_unit_price=variant.effective_price
+        )
     line.quantity += quantity
-    line.added_unit_price = variant.price
+    line.added_unit_price = variant.effective_price
     line.save()
     return line
 

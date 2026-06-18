@@ -141,7 +141,7 @@ def checkout(
     subtotal_base = Decimal("0")
     category_subtotals: dict[int, Decimal] = {}
     for line in lines:
-        line_base = line.variant.price * line.quantity
+        line_base = line.variant.effective_price * line.quantity
         subtotal_base += line_base
         cat_id = line.variant.product.category_id
         if cat_id is not None:
@@ -226,16 +226,17 @@ def checkout(
     )
 
     for line in lines:
-        line_base = line.variant.price * line.quantity
+        unit_base = line.variant.effective_price
+        line_base = unit_base * line.quantity
         order_line = OrderLine.objects.create(
             order=order,
             variant=line.variant,
             sku=line.variant.sku,
             title=line.variant.product.title,
             quantity=line.quantity,
-            unit_price_base=line.variant.price,
+            unit_price_base=unit_base,
             line_total_base=line_base,
-            unit_price_charged=charged(line.variant.price),
+            unit_price_charged=charged(unit_base),
             line_total_charged=charged(line_base),
             fulfillment_type=line.variant.effective_fulfillment_type,
         )
