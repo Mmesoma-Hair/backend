@@ -32,6 +32,11 @@ echo "==> Applying database migrations"
 echo "==> Collecting static files"
 .venv/bin/python manage.py collectstatic --noinput
 
+# Bust the settings/FX cache so newly-deployed storeconfig specs surface
+# immediately (the settings map is cached with no expiry).
+echo "==> Clearing caches"
+.venv/bin/python manage.py shell -c "from django.core.cache import cache; cache.clear()" || true
+
 echo "==> Restarting services"
 sudo systemctl restart gunicorn celery-worker celery-beat
 
