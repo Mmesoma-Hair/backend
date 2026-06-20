@@ -9,6 +9,7 @@ from .admin_views import (
     OptionValueAdminViewSet,
     ProductAdminViewSet,
     ProductImageAdminViewSet,
+    ProductReviewAdminViewSet,
     VariantAdminViewSet,
 )
 
@@ -19,6 +20,7 @@ router.register("option-types", OptionTypeAdminViewSet, basename="admin-option-t
 router.register("option-values", OptionValueAdminViewSet, basename="admin-option-value")
 router.register("variants", VariantAdminViewSet, basename="admin-variant")
 router.register("images", ProductImageAdminViewSet, basename="admin-image")
+router.register("reviews", ProductReviewAdminViewSet, basename="admin-review")
 router.register("products", ProductAdminViewSet, basename="admin-product")
 
 urlpatterns = router.urls

@@ -19,6 +19,7 @@ from __future__ import annotations
 import secrets
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
@@ -103,6 +104,11 @@ class Product(BaseModel):
         default=Decimal("0"),
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
     )
+    # Key features / specs shown in the "Features" tab (Markdown).
+    features = models.TextField(blank=True)
+    # Denormalised review aggregates (kept current by the reviews service).
+    rating_avg = models.DecimalField(max_digits=3, decimal_places=2, default=Decimal("0"))
+    rating_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ("-created_at",)
@@ -187,6 +193,12 @@ class Variant(BaseModel):
 
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True, db_index=True)
+    # Minimum order quantity (wholesale / MOQ selling). 1 = normal retail.
+    moq = models.PositiveIntegerField(default=1)
+    # Quantity price breaks: [{"min_qty": 50, "price": "1800.00"}, ...]. The unit
+    # price for an order is the price of the highest min_qty tier <= the quantity
+    # (falls back to ``price``). Sorted/validated by the admin serializer.
+    price_tiers = models.JSONField(default=list, blank=True)
     weight_grams = models.PositiveIntegerField(null=True, blank=True)
     barcode = models.CharField(max_length=64, blank=True)
     # Override product routing per variant (blank = inherit from product).
@@ -213,10 +225,28 @@ class Variant(BaseModel):
     def __str__(self) -> str:
         return self.sku
 
+    def base_price_for(self, quantity: int) -> Decimal:
+        """List unit price for ``quantity`` (before discount) — applies price breaks."""
+        best = self.price
+        best_min = 0
+        for tier in self.price_tiers or []:
+            try:
+                tmin = int(tier.get("min_qty", 0))
+                tprice = Decimal(str(tier.get("price")))
+            except (TypeError, ValueError, ArithmeticError):
+                continue
+            if quantity >= tmin > best_min:
+                best, best_min = tprice, tmin
+        return best
+
+    def unit_price_for(self, quantity: int) -> Decimal:
+        """Base-currency unit price actually charged for ``quantity`` (after discount)."""
+        return self.product.apply_discount(self.base_price_for(max(int(quantity or 1), 1)))
+
     @property
     def effective_price(self) -> Decimal:
-        """Base-currency price actually charged, after the product discount."""
-        return self.product.apply_discount(self.price)
+        """Unit price at the MOQ — the realistic 'from' price for display."""
+        return self.unit_price_for(self.moq or 1)
 
     @property
     def is_discounted(self) -> bool:
@@ -276,3 +306,49 @@ class ProductImage(BaseModel):
 
     def __str__(self) -> str:
         return self.public_id
+
+
+class ReviewStatus(models.TextChoices):
+    PUBLISHED = "published", "Published"
+    HIDDEN = "hidden", "Hidden"
+
+
+class ProductReview(BaseModel):
+    """A customer review for a product (one per user per product).
+
+    ``is_verified_purchase`` is set when the author has a paid order containing
+    the product. Admins can hide reviews (moderation); ``status`` drives whether
+    a review is publicly visible and counts toward the product's rating.
+    """
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="reviews")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="product_reviews",
+    )
+    author_name = models.CharField(max_length=120, blank=True)
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    title = models.CharField(max_length=160, blank=True)
+    body = models.TextField(blank=True)
+    is_verified_purchase = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20, choices=ReviewStatus.choices, default=ReviewStatus.PUBLISHED, db_index=True
+    )
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "user"],
+                condition=models.Q(user__isnull=False),
+                name="uniq_review_per_user_product",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.rating}★ {self.product.title}"

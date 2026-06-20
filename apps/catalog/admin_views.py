@@ -14,6 +14,7 @@ from apps.common.audit import record_audit
 from apps.common.audit_mixins import AuditedModelViewSet
 from apps.common.models import AuditLog
 
+from . import reviews as review_services
 from . import services
 from .admin_serializers import (
     BrandAdminSerializer,
@@ -24,10 +25,20 @@ from .admin_serializers import (
     ProductAdminSerializer,
     ProductCreateSerializer,
     ProductImageCreateSerializer,
+    ProductReviewAdminSerializer,
     UploadSignatureSerializer,
     VariantAdminSerializer,
 )
-from .models import Brand, Category, OptionType, OptionValue, Product, ProductImage, Variant
+from .models import (
+    Brand,
+    Category,
+    OptionType,
+    OptionValue,
+    Product,
+    ProductImage,
+    ProductReview,
+    Variant,
+)
 from .serializers import ProductImageSerializer, VariantSerializer
 
 
@@ -186,3 +197,23 @@ class ProductAdminViewSet(_AdminModelViewSet):
     def upload_signature(self, request: Request) -> Response:
         """Return signed params so the client can upload directly to Cloudinary."""
         return Response(services.upload_signature())
+
+
+class ProductReviewAdminViewSet(AuditedModelViewSet):
+    """Moderate customer reviews: list, hide/show (status) or delete."""
+
+    permission_classes = [IsAdminRole]
+    queryset = ProductReview.objects.select_related("product").all()
+    serializer_class = ProductReviewAdminSerializer
+    filterset_fields = ["status", "product", "rating"]
+    search_fields = ["author_name", "title", "body"]
+    http_method_names = ["get", "patch", "delete"]
+
+    def perform_update(self, serializer: ProductReviewAdminSerializer) -> None:
+        review = serializer.save()
+        review_services.recompute_rating(review.product)
+
+    def perform_destroy(self, instance: ProductReview) -> None:
+        product = instance.product
+        instance.delete()
+        review_services.recompute_rating(product)

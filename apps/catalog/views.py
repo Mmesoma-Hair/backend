@@ -3,23 +3,27 @@
 from __future__ import annotations
 
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.currency.pricing import resolve_currency
 
+from . import reviews as review_services
 from . import selectors
-from .models import Category, Variant
+from .models import Category, Product, ProductReview, ReviewStatus, Variant
 from .serializers import (
     CategorySerializer,
     ProductDetailSerializer,
     ProductListSerializer,
+    ProductReviewSerializer,
     ResolveVariantRequestSerializer,
+    ReviewCreateSerializer,
     VariantSerializer,
 )
 
@@ -110,3 +114,37 @@ class ResolveVariantView(APIView):
             )
         currency = resolve_currency(request.query_params.get("currency"))
         return Response(VariantSerializer(variant, context={"currency": currency}).data)
+
+
+class ProductReviewListView(generics.ListAPIView):
+    """Published reviews for a product (by slug)."""
+
+    permission_classes = [AllowAny]
+    serializer_class = ProductReviewSerializer
+
+    def get_queryset(self):  # type: ignore[override]
+        return ProductReview.objects.filter(
+            product__slug=self.kwargs["slug"], status=ReviewStatus.PUBLISHED
+        )
+
+
+class ReviewCreateView(APIView):
+    """Submit a review (one per user per product). Authentication required."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(request=ReviewCreateSerializer, responses={201: ProductReviewSerializer})
+    def post(self, request: Request) -> Response:
+        serializer = ReviewCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        d = serializer.validated_data
+        product = get_object_or_404(Product, id=d["product"])
+        review = review_services.submit_review(
+            product=product,
+            user=request.user,
+            rating=d["rating"],
+            title=d.get("title", ""),
+            body=d.get("body", ""),
+            author_name=d.get("author_name", ""),
+        )
+        return Response(ProductReviewSerializer(review).data, status=status.HTTP_201_CREATED)

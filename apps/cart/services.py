@@ -44,12 +44,14 @@ def add_item(cart: Cart, *, variant_id: str, quantity: int = 1) -> CartLine:
         raise DomainError("Quantity must be positive.", code="invalid_quantity")
     variant = _active_variant(variant_id)
     line = cart.lines.filter(variant=variant).first()
+    new_qty = (line.quantity if line else 0) + quantity
+    # Enforce the minimum order quantity (wholesale / MOQ).
+    new_qty = max(new_qty, variant.moq or 1)
     if line is None:
-        line = CartLine(
-            cart=cart, variant=variant, quantity=0, added_unit_price=variant.effective_price
-        )
-    line.quantity += quantity
-    line.added_unit_price = variant.effective_price
+        line = CartLine(cart=cart, variant=variant, quantity=0)
+    line.quantity = new_qty
+    # Quantity-aware unit price (price breaks + discount).
+    line.added_unit_price = variant.unit_price_for(new_qty)
     line.save()
     return line
 
@@ -62,8 +64,10 @@ def update_item(cart: Cart, *, line_id: str, quantity: int) -> CartLine | None:
     if quantity <= 0:
         line.delete()
         return None
-    line.quantity = quantity
-    line.save(update_fields=["quantity", "updated_at"])
+    # Never below the variant's MOQ.
+    line.quantity = max(quantity, line.variant.moq or 1)
+    line.added_unit_price = line.variant.unit_price_for(line.quantity)
+    line.save(update_fields=["quantity", "added_unit_price", "updated_at"])
     return line
 
 

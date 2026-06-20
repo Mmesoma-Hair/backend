@@ -15,7 +15,40 @@ from apps.currency.pricing import price_for
 from apps.inventory.selectors import variant_availability
 
 from .images import image_urls
-from .models import Brand, Category, OptionType, OptionValue, Product, ProductImage, Variant
+from .models import (
+    Brand,
+    Category,
+    OptionType,
+    OptionValue,
+    Product,
+    ProductImage,
+    ProductReview,
+    Variant,
+)
+
+
+class ProductReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductReview
+        fields = (
+            "id",
+            "author_name",
+            "rating",
+            "title",
+            "body",
+            "is_verified_purchase",
+            "created_at",
+        )
+
+
+class ReviewCreateSerializer(serializers.Serializer):
+    product = serializers.UUIDField()
+    rating = serializers.IntegerField(min_value=1, max_value=5)
+    title = serializers.CharField(required=False, allow_blank=True, default="", max_length=160)
+    body = serializers.CharField(required=False, allow_blank=True, default="")
+    author_name = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=120
+    )
 
 
 def _ctx_currency(serializer: serializers.Serializer) -> str | None:
@@ -75,6 +108,7 @@ class VariantSerializer(serializers.ModelSerializer):
     discount_percent = serializers.DecimalField(
         source="product.discount_percent", max_digits=5, decimal_places=2, read_only=True
     )
+    price_tiers = serializers.SerializerMethodField()
 
     class Meta:
         model = Variant
@@ -85,6 +119,8 @@ class VariantSerializer(serializers.ModelSerializer):
             "price_display",
             "compare_at_display",
             "discount_percent",
+            "moq",
+            "price_tiers",
             "is_default",
             "options_key",
             "option_value_ids",
@@ -97,6 +133,26 @@ class VariantSerializer(serializers.ModelSerializer):
     def get_price_display(self, obj: Variant) -> dict | None:
         currency = _ctx_currency(self)
         return price_for(obj.effective_price, currency) if currency else None
+
+    def get_price_tiers(self, obj: Variant) -> list[dict]:
+        """Quantity price breaks with the (discounted) unit price for each tier."""
+        currency = _ctx_currency(self)
+        out: list[dict] = []
+        for tier in obj.price_tiers or []:
+            try:
+                min_qty = int(tier.get("min_qty", 0))
+            except (TypeError, ValueError):
+                continue
+            unit = obj.unit_price_for(min_qty)
+            out.append(
+                {
+                    "min_qty": min_qty,
+                    "unit_price": str(unit),
+                    "unit_price_display": price_for(unit, currency) if currency else None,
+                }
+            )
+        out.sort(key=lambda t: t["min_qty"])
+        return out
 
     def get_compare_at_display(self, obj: Variant) -> dict | None:
         currency = _ctx_currency(self)
@@ -122,6 +178,8 @@ class ProductListSerializer(serializers.ModelSerializer):
     price_from_display = serializers.SerializerMethodField()
     compare_at_from_display = serializers.SerializerMethodField()
     discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
+    rating_avg = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
+    rating_count = serializers.IntegerField(read_only=True)
     primary_image = serializers.SerializerMethodField()
     share_path = serializers.SerializerMethodField()
     has_options = serializers.SerializerMethodField()
@@ -140,6 +198,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             "price_from_display",
             "compare_at_from_display",
             "discount_percent",
+            "rating_avg",
+            "rating_count",
             "primary_image",
             "share_path",
             "has_options",
@@ -199,6 +259,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField()
     share_path = serializers.SerializerMethodField()
     discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
+    rating_avg = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
+    rating_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Product
@@ -208,10 +270,13 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "slug",
             "short_id",
             "description",
+            "features",
             "category",
             "brand",
             "fulfillment_type",
             "discount_percent",
+            "rating_avg",
+            "rating_count",
             "option_types",
             "variants",
             "images",

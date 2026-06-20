@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
+
 from rest_framework import serializers
 
 from .models import (
@@ -11,8 +13,38 @@ from .models import (
     OptionType,
     OptionValue,
     Product,
+    ProductReview,
     Variant,
 )
+
+
+class ProductReviewAdminSerializer(serializers.ModelSerializer):
+    product_title = serializers.CharField(source="product.title", read_only=True)
+
+    class Meta:
+        model = ProductReview
+        fields = (
+            "id",
+            "product",
+            "product_title",
+            "author_name",
+            "rating",
+            "title",
+            "body",
+            "is_verified_purchase",
+            "status",
+            "created_at",
+        )
+        read_only_fields = (
+            "product",
+            "product_title",
+            "author_name",
+            "rating",
+            "title",
+            "body",
+            "is_verified_purchase",
+            "created_at",
+        )
 
 
 class CategoryAdminSerializer(serializers.ModelSerializer):
@@ -62,15 +94,26 @@ class ProductAdminSerializer(serializers.ModelSerializer):
             "supplier",
             "is_active",
             "discount_percent",
+            "features",
             "primary_image",
             "variant_count",
             "price_from",
+            "rating_avg",
+            "rating_count",
         )
-        read_only_fields = ("short_id", "primary_image", "variant_count", "price_from")
+        read_only_fields = (
+            "short_id",
+            "primary_image",
+            "variant_count",
+            "price_from",
+            "rating_avg",
+            "rating_count",
+        )
         extra_kwargs = {
             "slug": {"required": False},
             "supplier": {"required": False},
             "discount_percent": {"required": False},
+            "features": {"required": False},
         }
 
     def get_primary_image(self, obj: Product) -> str | None:
@@ -114,6 +157,8 @@ class VariantAdminSerializer(serializers.ModelSerializer):
             "sku",
             "price",
             "cost_price",
+            "moq",
+            "price_tiers",
             "is_active",
             "is_default",
             "weight_grams",
@@ -123,6 +168,33 @@ class VariantAdminSerializer(serializers.ModelSerializer):
             "option_value_ids",
         )
         read_only_fields = ("options_key", "is_default")
+        extra_kwargs = {
+            "moq": {"required": False},
+            "price_tiers": {"required": False},
+        }
+
+    def validate_price_tiers(self, value: object) -> list:
+        """Normalise to a clean, sorted list of {min_qty:int, price:str}."""
+        if not value:
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Price tiers must be a list.")
+        cleaned = []
+        for row in value:
+            if not isinstance(row, dict):
+                continue
+            try:
+                min_qty = int(row.get("min_qty"))
+                price = str(Decimal(str(row.get("price"))))
+            except (TypeError, ValueError, ArithmeticError, InvalidOperation) as exc:
+                raise serializers.ValidationError(
+                    "Each tier needs a whole-number min_qty and a numeric price."
+                ) from exc
+            if min_qty < 1:
+                raise serializers.ValidationError("min_qty must be at least 1.")
+            cleaned.append({"min_qty": min_qty, "price": price})
+        cleaned.sort(key=lambda r: r["min_qty"])
+        return cleaned
 
 
 class ProductImageCreateSerializer(serializers.Serializer):
