@@ -300,6 +300,22 @@ SETTINGS: dict[str, SettingSpec] = {
             "Chat with us to place your order.",
             "Short prompt shown next to the order button.",
         ),
+        # Blog AI writer (OpenRouter).
+        SettingSpec(
+            "blog.openrouter_api_key",
+            "blog",
+            STRING,
+            "",
+            "OpenRouter API key for the 'Write with AI' blog feature.",
+            secret=True,
+        ),
+        SettingSpec(
+            "blog.ai_model",
+            "blog",
+            STRING,
+            "openai/gpt-4o-mini",
+            "OpenRouter model id used to generate blog drafts.",
+        ),
         # Payments — managed from the admin Payments page (secrets masked).
         SettingSpec(
             "payments.provider", "payments", STRING, "mock", "Active gateway.", _payment_provider

@@ -79,6 +79,7 @@ LOCAL_APPS = [
     "apps.suppliers",
     "apps.fulfillment",
     "apps.notifications",
+    "apps.blog",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -326,3 +327,9 @@ EMAIL_LOGO_URL = env("EMAIL_LOGO_URL", f"{FRONTEND_BASE_URL.rstrip('/')}/logo.pn
 # Telegram bot. TELEGRAM_DEFAULT_CHAT_ID is the store-ops chat (new-order alerts).
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_DEFAULT_CHAT_ID = env("TELEGRAM_DEFAULT_CHAT_ID", "")
+
+# --- Blog AI writer (OpenRouter) --------------------------------------------
+# Admin-configurable via storeconfig (blog.openrouter_api_key / blog.ai_model);
+# these env values are fallbacks. Secrets come from the environment only.
+OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = env("OPENROUTER_MODEL", "")

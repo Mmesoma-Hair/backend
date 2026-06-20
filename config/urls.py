@@ -23,6 +23,7 @@ api_v1_patterns = [
     path("cart/", include("apps.cart.urls")),
     path("", include("apps.orders.urls")),
     path("payments/", include("apps.payments.urls")),
+    path("blog/", include("apps.blog.urls")),
 ]
 
 # Admin API namespace (role-gated to `admin`). Each domain contributes a router.
@@ -37,6 +38,7 @@ api_v1_admin_patterns = [
     path("suppliers/", include("apps.suppliers.admin_urls")),
     path("accounts/", include("apps.accounts.admin_urls")),
     path("storeconfig/", include("apps.storeconfig.admin_urls")),
+    path("blog/", include("apps.blog.admin_urls")),
 ]
 
 urlpatterns = [
