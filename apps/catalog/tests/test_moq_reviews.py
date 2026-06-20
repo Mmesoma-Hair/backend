@@ -114,3 +114,50 @@ def test_review_requires_auth(setup) -> None:
         format="json",
     )
     assert r.status_code in (401, 403)
+
+
+@pytest.mark.django_db
+def test_price_tiers_must_decrease(setup) -> None:
+    from apps.catalog.admin_serializers import VariantAdminSerializer
+
+    v = make_variant("45000.00", title="Wholesale Hoodie")  # base price 45000
+
+    # A break that costs MORE at a higher quantity is rejected (base from instance).
+    bad = VariantAdminSerializer(
+        instance=v,
+        data={"price_tiers": [{"min_qty": 5, "price": "9000"}, {"min_qty": 11, "price": "9500"}]},
+        partial=True,
+    )
+    assert not bad.is_valid()
+    assert "price_tiers" in bad.errors
+
+    # A break priced above the base is rejected.
+    over = VariantAdminSerializer(
+        instance=v,
+        data={"price_tiers": [{"min_qty": 5, "price": "50000"}]},
+        partial=True,
+    )
+    assert not over.is_valid()
+
+    # Proper descending breaks are accepted.
+    good = VariantAdminSerializer(
+        instance=v,
+        data={"price_tiers": [{"min_qty": 6, "price": "40000"}, {"min_qty": 20, "price": "35000"}]},
+        partial=True,
+    )
+    assert good.is_valid(), good.errors
+
+
+@pytest.mark.django_db
+def test_storefront_hides_non_saving_tiers(setup) -> None:
+    from apps.catalog.serializers import VariantSerializer
+
+    v = make_variant("45000.00", title="Defensive")
+    v.price_tiers = [
+        {"min_qty": 5, "price": "10"},
+        {"min_qty": 11, "price": "20"},  # not a saving vs the 5-tier — hidden
+    ]
+    v.save()
+    data = VariantSerializer(v, context={"currency": "NGN"}).data
+    mins = [t["min_qty"] for t in data["price_tiers"]]
+    assert 11 not in mins

@@ -198,6 +198,32 @@ class VariantAdminSerializer(serializers.ModelSerializer):
         cleaned.sort(key=lambda r: r["min_qty"])
         return cleaned
 
+    def validate(self, attrs: dict) -> dict:
+        """A price break must be a real saving: cheaper than the base price and
+        than every earlier (lower-quantity) tier."""
+        tiers = attrs.get("price_tiers")
+        if not tiers:
+            return attrs
+        base = attrs.get("price")
+        if base is None and self.instance is not None:
+            base = self.instance.price
+        prev = Decimal(str(base)) if base is not None else None
+        for tier in tiers:  # already sorted ascending by min_qty
+            price = Decimal(tier["price"])
+            if prev is not None and price >= prev:
+                raise serializers.ValidationError(
+                    {
+                        "price_tiers": (
+                            f"The price for {tier['min_qty']}+ units "
+                            f"({price:f}) must be lower than the price for the "
+                            "smaller quantity above it. Bigger orders should cost "
+                            "less per unit."
+                        )
+                    }
+                )
+            prev = price
+        return attrs
+
 
 class ProductImageCreateSerializer(serializers.Serializer):
     """Create an image record from an already-uploaded Cloudinary public_id."""

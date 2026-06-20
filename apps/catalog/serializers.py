@@ -136,15 +136,26 @@ class VariantSerializer(serializers.ModelSerializer):
         return price_for(obj.effective_price, currency) if currency else None
 
     def get_price_tiers(self, obj: Variant) -> list[dict]:
-        """Quantity price breaks with the (discounted) unit price for each tier."""
+        """Quantity price breaks with the (discounted) unit price for each tier.
+
+        Defensive: only surfaces tiers that are genuine savings — cheaper than
+        the base unit price and than every earlier tier — so legacy/bad data
+        can't render an inflated "buy more, save more" row.
+        """
         currency = _ctx_currency(self)
         out: list[dict] = []
-        for tier in obj.price_tiers or []:
+        prev = obj.effective_price  # base unit price (at MOQ)
+        for tier in sorted(
+            obj.price_tiers or [],
+            key=lambda t: int(t.get("min_qty", 0) or 0),
+        ):
             try:
                 min_qty = int(tier.get("min_qty", 0))
             except (TypeError, ValueError):
                 continue
             unit = obj.unit_price_for(min_qty)
+            if unit >= prev:
+                continue  # not a saving — skip
             out.append(
                 {
                     "min_qty": min_qty,
@@ -152,7 +163,7 @@ class VariantSerializer(serializers.ModelSerializer):
                     "unit_price_display": price_for(unit, currency) if currency else None,
                 }
             )
-        out.sort(key=lambda t: t["min_qty"])
+            prev = unit
         return out
 
     def get_compare_at_display(self, obj: Variant) -> dict | None:
