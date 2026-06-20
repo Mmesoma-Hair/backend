@@ -95,6 +95,8 @@ class Product(BaseModel):
         related_name="products",
     )
     is_active = models.BooleanField(default=True, db_index=True)
+    # When set, the product is grouped into the storefront "Flash Sale" section.
+    is_flash_sale = models.BooleanField(default=False, db_index=True)
     # Product-level discount applied to every variant's price (0 = no discount).
     # The discounted price is what the customer is actually charged; the original
     # price is shown struck-through in the storefront.

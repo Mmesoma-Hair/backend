@@ -41,7 +41,10 @@ def set_stock(variant: Variant, quantity: int, *, warehouse: Warehouse | None = 
     warehouse = warehouse or get_default_warehouse()
     item, _ = StockItem.objects.get_or_create(variant=variant, warehouse=warehouse)
     item.on_hand = quantity
-    item.save(update_fields=["on_hand", "updated_at"])
+    # Raise the stock-bar baseline to the new level on restock; selling never
+    # lowers it, so the bar depletes from "full" down to out-of-stock.
+    item.full_stock = max(item.full_stock, quantity)
+    item.save(update_fields=["on_hand", "full_stock", "updated_at"])
     return item
 
 

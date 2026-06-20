@@ -20,7 +20,10 @@ def product_detail_queryset() -> QuerySet[Product]:
     """Products with everything the storefront detail view needs, prefetched."""
     return Product.objects.filter(is_active=True).prefetch_related(
         "option_types__values",
-        Prefetch("variants", queryset=Variant.objects.filter(is_active=True)),
+        Prefetch(
+            "variants",
+            queryset=Variant.objects.filter(is_active=True).prefetch_related("stock_items"),
+        ),
         "variants__variant_options__option_value",
         "images",
     )
@@ -48,3 +51,20 @@ def variant_option_value_ids(variant: Variant) -> list[int]:
 
 def option_values_for_product(product: Product) -> QuerySet[OptionValue]:
     return OptionValue.objects.filter(option_type__product=product)
+
+
+def product_stock(product: Product) -> tuple[int, int]:
+    """(available, full) units across the product's internal-stock variants.
+
+    Relies on ``variants`` and ``variants__stock_items`` being prefetched, so it
+    adds no queries inside a product list. Dropship variants (no owned stock) are
+    excluded, so a dropship-only product reports (0, 0) and shows no stock bar.
+    """
+    available = full = 0
+    for variant in product.variants.all():
+        if variant.is_dropship:
+            continue
+        for item in variant.stock_items.all():
+            available += max(item.on_hand - item.reserved, 0)
+            full += item.full_stock
+    return available, full

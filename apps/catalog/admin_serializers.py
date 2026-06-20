@@ -93,6 +93,7 @@ class ProductAdminSerializer(serializers.ModelSerializer):
             "fulfillment_type",
             "supplier",
             "is_active",
+            "is_flash_sale",
             "discount_percent",
             "features",
             "primary_image",
@@ -112,6 +113,7 @@ class ProductAdminSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "slug": {"required": False},
             "supplier": {"required": False},
+            "is_flash_sale": {"required": False},
             "discount_percent": {"required": False},
             "features": {"required": False},
         }
@@ -236,6 +238,7 @@ class ProductCreateSerializer(serializers.Serializer):
     )
     supplier = serializers.IntegerField(required=False, allow_null=True)
     is_active = serializers.BooleanField(required=False, default=True)
+    is_flash_sale = serializers.BooleanField(required=False, default=False)
     discount_percent = serializers.DecimalField(
         max_digits=5, decimal_places=2, required=False, default=0, min_value=0, max_value=100
     )

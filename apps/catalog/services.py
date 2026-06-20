@@ -174,6 +174,7 @@ def create_product_full(
     fulfillment_type: str = "internal",
     supplier_id: Any = None,
     is_active: bool = True,
+    is_flash_sale: bool = False,
     discount_percent: Decimal | int = 0,
     image_public_id: str = "",
     kind: str = "simple",
@@ -220,6 +221,7 @@ def create_product_full(
         fulfillment_type=fulfillment_type,
         supplier=supplier,
         is_active=is_active,
+        is_flash_sale=is_flash_sale,
         discount_percent=discount_percent or 0,
     )
 

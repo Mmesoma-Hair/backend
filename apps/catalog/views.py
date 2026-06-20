@@ -39,7 +39,11 @@ class ProductListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = ProductListSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = {"category__slug": ["exact"], "brand__slug": ["exact"]}
+    filterset_fields = {
+        "category__slug": ["exact"],
+        "brand__slug": ["exact"],
+        "is_flash_sale": ["exact"],
+    }
     search_fields = ["title", "description"]
     ordering_fields = ["created_at", "price_from", "title"]
     ordering = ["-created_at"]
@@ -48,7 +52,10 @@ class ProductListView(generics.ListAPIView):
         return selectors.active_products().prefetch_related(
             "images",
             "option_types",
-            Prefetch("variants", queryset=Variant.objects.filter(is_active=True)),
+            Prefetch(
+                "variants",
+                queryset=Variant.objects.filter(is_active=True).prefetch_related("stock_items"),
+            ),
         )
 
     def get_serializer_context(self) -> dict:

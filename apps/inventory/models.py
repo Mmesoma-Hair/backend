@@ -34,6 +34,10 @@ class StockItem(TimeStampedModel):
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name="stock_items")
     on_hand = models.PositiveIntegerField(default=0)
     reserved = models.PositiveIntegerField(default=0)
+    # The "100%" baseline for the storefront stock bar — the high-water mark of
+    # on-hand stock (raised on restock, never lowered by sales) so the bar reads
+    # full when freshly stocked and depletes as units sell.
+    full_stock = models.PositiveIntegerField(default=0)
 
     class Meta:
         constraints = [

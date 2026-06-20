@@ -14,6 +14,7 @@ from rest_framework import serializers
 from apps.currency.pricing import price_for
 from apps.inventory.selectors import variant_availability
 
+from . import selectors
 from .images import image_urls
 from .models import (
     Brand,
@@ -180,6 +181,9 @@ class ProductListSerializer(serializers.ModelSerializer):
     discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
     rating_avg = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
     rating_count = serializers.IntegerField(read_only=True)
+    is_flash_sale = serializers.BooleanField(read_only=True)
+    stock_available = serializers.SerializerMethodField()
+    stock_full = serializers.SerializerMethodField()
     primary_image = serializers.SerializerMethodField()
     share_path = serializers.SerializerMethodField()
     has_options = serializers.SerializerMethodField()
@@ -200,11 +204,20 @@ class ProductListSerializer(serializers.ModelSerializer):
             "discount_percent",
             "rating_avg",
             "rating_count",
+            "is_flash_sale",
+            "stock_available",
+            "stock_full",
             "primary_image",
             "share_path",
             "has_options",
             "default_variant",
         )
+
+    def get_stock_available(self, obj: Product) -> int:
+        return selectors.product_stock(obj)[0]
+
+    def get_stock_full(self, obj: Product) -> int:
+        return selectors.product_stock(obj)[1]
 
     def _orig_price_from(self, obj: Product) -> Any:
         return getattr(obj, "price_from", None)
@@ -261,6 +274,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
     rating_avg = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
     rating_count = serializers.IntegerField(read_only=True)
+    is_flash_sale = serializers.BooleanField(read_only=True)
+    stock_available = serializers.SerializerMethodField()
+    stock_full = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -277,11 +293,20 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "discount_percent",
             "rating_avg",
             "rating_count",
+            "is_flash_sale",
+            "stock_available",
+            "stock_full",
             "option_types",
             "variants",
             "images",
             "share_path",
         )
+
+    def get_stock_available(self, obj: Product) -> int:
+        return selectors.product_stock(obj)[0]
+
+    def get_stock_full(self, obj: Product) -> int:
+        return selectors.product_stock(obj)[1]
 
     def get_images(self, obj: Product) -> list[dict[str, Any]]:
         # Product-level (shared) images only; variant images live on each variant.
