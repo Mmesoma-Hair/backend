@@ -92,6 +92,13 @@ def _payment_provider(value: Any) -> None:
         raise ValidationError("Must be one of: mock, paystack, flutterwave.")
 
 
+def _hex_color(value: Any) -> None:
+    import re
+
+    if not re.fullmatch(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})", str(value)):
+        raise ValidationError("Must be a hex colour like #6E0D25.")
+
+
 # --- the registry -----------------------------------------------------------
 SETTINGS: dict[str, SettingSpec] = {
     spec.key: spec
@@ -114,6 +121,22 @@ SETTINGS: dict[str, SettingSpec] = {
             STRING,
             "",
             "Cloudinary public_id of the store logo.",
+        ),
+        SettingSpec(
+            "branding.primary_color",
+            "identity",
+            STRING,
+            "#6E0D25",
+            "Primary brand colour (hex) used across the storefront.",
+            _hex_color,
+        ),
+        SettingSpec(
+            "branding.accent_color",
+            "identity",
+            STRING,
+            "#C9184A",
+            "Accent / call-to-action colour (hex).",
+            _hex_color,
         ),
         # Currency
         SettingSpec(
@@ -359,6 +382,8 @@ PUBLIC_KEYS: frozenset[str] = frozenset(
         "store.tagline",
         "store.support_email",
         "store.logo_public_id",
+        "branding.primary_color",
+        "branding.accent_color",
         "currency.base",
         "currency.enabled",
         "tax.inclusive_pricing",
