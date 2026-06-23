@@ -238,6 +238,14 @@ SETTINGS: dict[str, SettingSpec] = {
             False,
             "Let the payer set shipping on a shared cart (gift mode).",
         ),
+        # Catalog display
+        SettingSpec(
+            "catalog.hide_out_of_stock",
+            "catalog",
+            BOOLEAN,
+            False,
+            "Hide out-of-stock products from the storefront instead of showing them.",
+        ),
         # Content blocks
         SettingSpec(
             "content.announcement", "content", TEXT, "", "Site-wide announcement banner text."
@@ -390,6 +398,7 @@ PUBLIC_KEYS: frozenset[str] = frozenset(
         "features.pay_for_a_friend",
         "features.guest_payers",
         "features.guest_checkout",
+        "catalog.hide_out_of_stock",
         "content.announcement",
         "hero.badge",
         "hero.headline",
