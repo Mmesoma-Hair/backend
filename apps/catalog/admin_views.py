@@ -126,6 +126,7 @@ class ProductAdminViewSet(_AdminModelViewSet):
             description=d.get("description", ""),
             category_id=d.get("category"),
             new_category=d.get("new_category", ""),
+            new_category_image=d.get("new_category_image", ""),
             brand_id=d.get("brand"),
             fulfillment_type=d["fulfillment_type"],
             supplier_id=d.get("supplier"),

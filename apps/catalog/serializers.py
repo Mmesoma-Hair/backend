@@ -68,9 +68,14 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = Category
-        fields = ("id", "name", "slug", "parent", "position")
+        fields = ("id", "name", "slug", "parent", "position", "image")
+
+    def get_image(self, obj: Category) -> dict[str, str] | None:
+        return image_urls(obj.image_public_id) if obj.image_public_id else None
 
 
 class BrandSerializer(serializers.ModelSerializer):

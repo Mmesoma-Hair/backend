@@ -170,6 +170,7 @@ def create_product_full(
     description: str = "",
     category_id: int | None = None,
     new_category: str = "",
+    new_category_image: str = "",
     brand_id: int | None = None,
     fulfillment_type: str = "internal",
     supplier_id: Any = None,
@@ -201,9 +202,14 @@ def create_product_full(
     category: Category | None = None
     if new_category.strip():
         name = new_category.strip()
-        category, _ = Category.objects.get_or_create(
-            slug=slugify(name) or name.lower(), defaults={"name": name}
+        category, created = Category.objects.get_or_create(
+            slug=slugify(name) or name.lower(),
+            defaults={"name": name, "image_public_id": new_category_image.strip()},
         )
+        # Backfill the image if the category already existed without one.
+        if not created and new_category_image.strip() and not category.image_public_id:
+            category.image_public_id = new_category_image.strip()
+            category.save(update_fields=["image_public_id"])
     elif category_id:
         category = Category.objects.filter(id=category_id).first()
     brand = Brand.objects.filter(id=brand_id).first() if brand_id else None

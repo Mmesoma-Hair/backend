@@ -50,8 +50,19 @@ class ProductReviewAdminSerializer(serializers.ModelSerializer):
 class CategoryAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ("id", "name", "slug", "parent", "position", "is_active")
-        extra_kwargs = {"slug": {"required": False}}
+        fields = (
+            "id",
+            "name",
+            "slug",
+            "parent",
+            "position",
+            "is_active",
+            "image_public_id",
+        )
+        extra_kwargs = {
+            "slug": {"required": False},
+            "image_public_id": {"required": False},
+        }
 
     def validate(self, attrs: dict) -> dict:
         if not attrs.get("slug") and attrs.get("name"):
@@ -258,6 +269,7 @@ class ProductCreateSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True, default="")
     category = serializers.IntegerField(required=False, allow_null=True)
     new_category = serializers.CharField(required=False, allow_blank=True, default="")
+    new_category_image = serializers.CharField(required=False, allow_blank=True, default="")
     brand = serializers.IntegerField(required=False, allow_null=True)
     fulfillment_type = serializers.ChoiceField(
         choices=[c[0] for c in FulfillmentType.choices], default=FulfillmentType.INTERNAL

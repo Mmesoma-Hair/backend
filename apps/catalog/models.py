@@ -47,6 +47,8 @@ class Category(TimeStampedModel):
     )
     position = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    # Cloudinary public_id of a representative image shown on the storefront.
+    image_public_id = models.CharField(max_length=255, blank=True)
 
     class Meta:
         ordering = ("position", "name")
