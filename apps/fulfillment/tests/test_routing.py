@@ -4,12 +4,14 @@ from decimal import Decimal
 
 import pytest
 
+from apps.accounts.tests.factories import UserFactory
 from apps.cart import services as cart_services
 from apps.cart.tests.factories import setup_currencies
 from apps.catalog.models import FulfillmentType, Product, Variant
 from apps.fulfillment import services as fulfillment_services
 from apps.fulfillment.models import Shipment, SupplierOrder
 from apps.inventory.services import available_quantity, set_stock
+from apps.notifications.models import Notification
 from apps.orders import services as order_services
 from apps.orders.models import OrderStatus
 from apps.payments import services as payment_services
@@ -60,9 +62,10 @@ def test_mixed_order_routes_internal_and_dropship(setup) -> None:
     supplier = Supplier.objects.create(name="Acme", code="acme", adapter="mock")
     order, internal, dropship = _paid_mixed_order(supplier)
 
-    # Internal shipment shipped immediately + stock decremented (10 - 2 = 8).
+    # Internal shipment is created PENDING (admin ships later) but stock is
+    # committed now (10 - 2 = 8) — reservations would otherwise expire.
     internal_shipment = order.shipments.get(kind=Shipment.Kind.INTERNAL)
-    assert internal_shipment.status == Shipment.Status.SHIPPED
+    assert internal_shipment.status == Shipment.Status.PENDING
     assert available_quantity(internal) == 8
 
     # Dropship: supplier order placed, shipment pending.
@@ -72,35 +75,59 @@ def test_mixed_order_routes_internal_and_dropship(setup) -> None:
     assert sup_order.supplier_id == supplier.id
     assert sup_order.external_ref
 
-    # With one line shipped and one pending, the order is partially fulfilled.
-    assert order.status == OrderStatus.PARTIALLY_FULFILLED
+    # Nothing has shipped yet → the order rests in Processing (routing), and no
+    # "shipped" email was sent on payment.
+    assert order.status == OrderStatus.ROUTING
+    assert not Notification.objects.filter(event="shipment_update").exists()
 
 
 @pytest.mark.django_db
-def test_polling_reconciles_to_fulfilled(setup) -> None:
+def test_polling_then_admin_ship_reconciles_to_fulfilled(setup) -> None:
     supplier = Supplier.objects.create(name="Acme", code="acme", adapter="mock")
     order, _, _ = _paid_mixed_order(supplier)
-    assert order.status == OrderStatus.PARTIALLY_FULFILLED
+    assert order.status == OrderStatus.ROUTING
 
-    # Poll the supplier → mock reports shipped → reconcile to fulfilled.
+    # Poll the supplier → dropship shipped. Internal is still pending, so the
+    # order is only partially fulfilled.
     updated = fulfillment_services.poll_supplier_orders()
     assert updated == 1
     order.refresh_from_db()
-    assert order.status == OrderStatus.FULFILLED
+    assert order.status == OrderStatus.PARTIALLY_FULFILLED
     dropship_shipment = order.shipments.get(kind=Shipment.Kind.DROPSHIP)
     assert dropship_shipment.status == Shipment.Status.SHIPPED
     assert dropship_shipment.tracking_number
 
+    # Admin ships the internal portion → order fully fulfilled.
+    fulfillment_services.mark_internal_shipped(order)
+    order.refresh_from_db()
+    assert order.status == OrderStatus.FULFILLED
+
 
 @pytest.mark.django_db
-def test_all_internal_order_fulfilled_on_routing(setup) -> None:
+def test_internal_order_processing_until_admin_marks_shipped(setup) -> None:
+    owner = UserFactory(email="buyer@example.com", password="x")
     v = _internal_variant(stock=5)
-    cart = cart_services.get_or_create_cart(session_key="int")
+    cart = cart_services.get_or_create_cart(user=owner)
     cart_services.add_item(cart, variant_id=str(v.id), quantity=1)
     cart_services.set_shipping(cart, {"name": "A", "line1": "1 St", "city": "T", "country": "US"})
     order = order_services.checkout(cart, idempotency_key="int-1", currency="USD")
     payment_services.confirm_mock_payment(order.payments.first())
     order.refresh_from_db()
-    # No dropship lines → fully shipped on routing.
-    assert order.status == OrderStatus.FULFILLED
+
+    # Stock is committed on payment, but the order only ships on an admin action.
+    assert order.status == OrderStatus.ROUTING
     assert available_quantity(v) == 4
+    assert order.shipments.get(kind=Shipment.Kind.INTERNAL).status == Shipment.Status.PENDING
+    assert not Notification.objects.filter(event="shipment_update").exists()
+
+    # Admin marks shipped (with tracking) → email fires + order fulfilled.
+    fulfillment_services.mark_internal_shipped(order, tracking_number="TRK1", carrier="DHL")
+    order.refresh_from_db()
+    assert order.status == OrderStatus.FULFILLED
+    shipment = order.shipments.get(kind=Shipment.Kind.INTERNAL)
+    assert shipment.status == Shipment.Status.SHIPPED
+    assert shipment.tracking_number == "TRK1"
+    assert shipment.carrier == "DHL"
+    assert Notification.objects.filter(
+        event="shipment_update", recipient="buyer@example.com"
+    ).exists()

@@ -47,12 +47,12 @@ def test_different_user_pays_shared_cart_owner_keeps_ownership(setup) -> None:
     assert order.owner_id == owner.id  # ownership stays with the cart owner
     assert order.paid_by_user_id == payer.id  # payer recorded separately
 
-    # The payer can complete payment → order paid (then auto-routes/ships for an
-    # internal line), still owned by the owner.
+    # The payer can complete payment → order paid (auto-routes to a pending
+    # internal shipment → "processing"), still owned by the owner.
     payment_services.confirm_mock_payment(order.payments.first())
     order.refresh_from_db()
     assert order.paid_at is not None
-    assert order.status == OrderStatus.FULFILLED
+    assert order.status == OrderStatus.ROUTING
     assert order.owner_id == owner.id
     assert order.paid_by_user_id == payer.id
 

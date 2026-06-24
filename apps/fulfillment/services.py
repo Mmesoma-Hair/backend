@@ -52,23 +52,25 @@ def route_order(order: Order) -> Order:
 
 
 def _ship_internal(order: Order, lines: list) -> None:
+    """Create the internal shipment **pending** and commit its stock.
+
+    Shipping itself is a deliberate admin action (``mark_internal_shipped``), so
+    the shipment starts PENDING and no "shipped" email goes out at payment time.
+    Stock, however, is consumed now: reservations expire on a TTL, so a paid
+    order must commit its stock immediately or a background task could release it.
+    Shipment status is tracked separately from stock.
+    """
     warehouse = inventory_services.get_default_warehouse()
     shipment = Shipment.objects.create(
         order=order,
         kind=Shipment.Kind.INTERNAL,
-        status=Shipment.Status.SHIPPED,
+        status=Shipment.Status.PENDING,
         warehouse=warehouse,
-        tracking_number=f"INT{order.number[-6:]}",
-        carrier="Internal",
     )
     for ln in lines:
         ShipmentLine.objects.create(shipment=shipment, order_line=ln, quantity=ln.quantity)
         # Consume the reserved stock for this line (permanently removes it).
         inventory_services.consume(_line_ref(order, ln.id))
-
-    from apps.notifications.notify import on_shipment_shipped
-
-    on_shipment_shipped(order, shipment)
 
 
 def _place_dropship(order: Order, supplier: Supplier, lines: list) -> None:
@@ -93,6 +95,40 @@ def _place_dropship(order: Order, supplier: Supplier, lines: list) -> None:
         external_ref=placed.external_ref,
         status=SupplierOrder.Status.PROCESSING,
     )
+
+
+@transaction.atomic
+def mark_internal_shipped(
+    order: Order, *, tracking_number: str = "", carrier: str = ""
+) -> list[Shipment]:
+    """Admin action: flip the order's pending **internal** shipments to SHIPPED.
+
+    Optionally stamps a tracking number / carrier, fires the (per-shipment,
+    idempotent) "shipped" email, and reconciles the order up to fulfilled /
+    partially fulfilled. Dropship shipments are left to the supplier poll, so
+    they're untouched here. Re-running is a no-op once nothing is pending.
+    """
+    pending = list(
+        order.shipments.filter(
+            kind=Shipment.Kind.INTERNAL, status=Shipment.Status.PENDING
+        ).prefetch_related("lines")
+    )
+    if not pending:
+        return []
+
+    from apps.notifications.notify import on_shipment_shipped
+
+    for shipment in pending:
+        shipment.status = Shipment.Status.SHIPPED
+        if tracking_number:
+            shipment.tracking_number = tracking_number
+        if carrier:
+            shipment.carrier = carrier
+        shipment.save(update_fields=["status", "tracking_number", "carrier", "updated_at"])
+        on_shipment_shipped(order, shipment)
+
+    reconcile(order)
+    return pending
 
 
 @transaction.atomic

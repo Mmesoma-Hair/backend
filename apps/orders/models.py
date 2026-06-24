@@ -25,7 +25,7 @@ def generate_order_number() -> str:
 class OrderStatus(models.TextChoices):
     PENDING = "pending", "Pending payment"
     PAID = "paid", "Paid"
-    ROUTING = "routing", "Routing"
+    ROUTING = "routing", "Processing"
     PARTIALLY_FULFILLED = "partially_fulfilled", "Partially fulfilled"
     FULFILLED = "fulfilled", "Fulfilled"
     COMPLETED = "completed", "Completed"

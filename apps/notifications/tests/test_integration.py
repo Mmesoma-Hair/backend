@@ -45,8 +45,17 @@ def test_order_paid_emails_customer_and_alerts_ops() -> None:
     ).exists()
     # Store ops get a Telegram alert (TELEGRAM_DEFAULT_CHAT_ID = "ops-chat" in test settings).
     assert any(chat == "ops-chat" for chat, _text, _token in MemoryTelegramBackend.outbox)
-    # An internal-only order ships immediately → shipment update email too.
-    assert Notification.objects.filter(event="shipment_update", channel=Channel.EMAIL).exists()
+    # Shipping is now a deliberate admin action — no "shipped" email at payment.
+    assert not Notification.objects.filter(event="shipment_update", channel=Channel.EMAIL).exists()
+
+    # Once the admin marks the internal shipment shipped, the email goes out.
+    from apps.fulfillment import services as fulfillment_services
+
+    order.refresh_from_db()
+    fulfillment_services.mark_internal_shipped(order, tracking_number="TRK9", carrier="UPS")
+    assert Notification.objects.filter(
+        event="shipment_update", channel=Channel.EMAIL, recipient="owner@example.com"
+    ).exists()
 
 
 def test_payer_also_notified_for_pay_for_a_friend() -> None:
