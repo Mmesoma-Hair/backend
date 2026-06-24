@@ -69,14 +69,14 @@ systemctl enable --now gunicorn celery-worker celery-beat
 cp deploy/nginx.conf /etc/nginx/sites-available/nasuru-api
 ln -sf /etc/nginx/sites-available/nasuru-api /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
-certbot --nginx -d api.nasuru.com --non-interactive --agree-tos -m admin@nasuru.com
+certbot --nginx -d api.eandewigs.com --non-interactive --agree-tos -m admin@eandewigs.com
 ```
 
 ## Ongoing deploys
 
 - **Automatic:** push to `main` → GitHub Actions (`.github/workflows/deploy.yml`)
   scps the code to the server as `prime`, then installs, migrates and restarts.
-- **Manual:** `ssh prime@api.nasuru.com 'cd ~/nasuru-api && bash deploy/deploy.sh'`
+- **Manual:** `ssh prime@api.eandewigs.com 'cd ~/nasuru-api && bash deploy/deploy.sh'`
 
 ### Required GitHub repository secrets
 
