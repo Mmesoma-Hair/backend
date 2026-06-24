@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 def base_context() -> dict[str, Any]:
     """Branding/context every template can rely on."""
     return {
-        "store_name": get_setting("store.name", "IdealCommerce"),
+        "store_name": get_setting("store.name", "Eandewigs"),
         "support_email": get_setting("store.support_email", settings.SUPPORT_EMAIL),
         "logo_url": settings.EMAIL_LOGO_URL,
         "frontend_url": settings.FRONTEND_BASE_URL.rstrip("/"),

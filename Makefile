@@ -1,4 +1,4 @@
-# IdealCommerce backend — common commands.
+# Eandewigs backend — common commands.
 #
 # Packages are managed with `uv` (https://docs.astral.sh/uv/). `uv run` executes
 # inside the project environment described by pyproject.toml + uv.lock, syncing

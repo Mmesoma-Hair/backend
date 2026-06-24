@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# IdealCommerce API deploy — pulls latest main, installs deps, migrates,
+# Eandewigs API deploy — pulls latest main, installs deps, migrates,
 # collects static and restarts services. Safe to run repeatedly (idempotent).
-# Runs as the `prime` user; restarting services uses passwordless sudo limited
-# to the three unit files (see deploy/sudoers.d-prime).
+# Runs as the `mmeso` user; restarting services uses passwordless sudo limited
+# to the three unit files (see deploy/sudoers.d-mmeso).
 #
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/home/prime/nasuru-api}"
+APP_DIR="${APP_DIR:-/home/mmeso/backend}"
 export PATH="$HOME/.local/bin:$PATH"
 export DJANGO_SETTINGS_MODULE=config.settings.prod
 

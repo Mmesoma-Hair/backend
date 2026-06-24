@@ -598,7 +598,7 @@ wheels = [
 ]
 
 [[package]]
-name = "idealcommerce-backend"
+name = "eandewigs-backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

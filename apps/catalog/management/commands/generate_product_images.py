@@ -57,7 +57,7 @@ def _icon_for(text: str) -> str:
   <path d="M392 376 L560 376 L608 424 L608 624 L392 624 Z" {stroke} />
   <path d="M560 376 L560 424 L608 424" {stroke} />
   <path d="M500 452 L518 502 L572 504 L530 538 L546 590 L500 560 L454 590 L470 538 L428 504 L482 502 Z" {stroke} />"""
-    # Default: shopping bag (echoes the IdealCommerce mark).
+    # Default: shopping bag (echoes the Eandewigs mark).
     return f"""
   <path d="M398 432 L602 432 L584 632 L416 632 Z" {stroke} />
   <path d="M452 432 C452 372 548 372 548 432" {stroke} />"""
@@ -97,7 +97,7 @@ def _svg(product: Product) -> str:
   {brand_badge}
   {category_line}
   <text x="500" y="788" text-anchor="middle" fill="{_BLUSH}" font-family="Georgia, serif" font-size="68" font-weight="700">{title}</text>
-  <text x="936" y="952" text-anchor="end" fill="{_BLUSH}" font-family="Georgia, serif" font-size="24" letter-spacing="2" opacity="0.5">idealcommerce</text>
+  <text x="936" y="952" text-anchor="end" fill="{_BLUSH}" font-family="Georgia, serif" font-size="24" letter-spacing="2" opacity="0.5">eandewigs</text>
 </svg>
 """
 

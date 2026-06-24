@@ -33,7 +33,7 @@ class HealthCheckView(APIView):
         db_ok = self._check_database()
         payload = {
             "status": "ok" if db_ok else "degraded",
-            "service": "idealcommerce-backend",
+            "service": "eandewigs-backend",
             "checks": {"database": "ok" if db_ok else "error"},
         }
         code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE

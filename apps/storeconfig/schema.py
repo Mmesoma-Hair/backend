@@ -104,7 +104,7 @@ SETTINGS: dict[str, SettingSpec] = {
     spec.key: spec
     for spec in (
         # Store identity / branding
-        SettingSpec("store.name", "identity", STRING, "IdealCommerce", "Public store name."),
+        SettingSpec("store.name", "identity", STRING, "Eandewigs", "Public store name."),
         SettingSpec(
             "store.tagline", "identity", STRING, "Shop the world.", "Short marketing tagline."
         ),
@@ -112,7 +112,7 @@ SETTINGS: dict[str, SettingSpec] = {
             "store.support_email",
             "identity",
             STRING,
-            "support@idealcommerce.test",
+            "support@eandewigs.test",
             "Support contact email.",
         ),
         SettingSpec(

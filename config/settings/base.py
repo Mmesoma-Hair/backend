@@ -128,9 +128,9 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": env("POSTGRES_DB", "idealcommerce"),
-            "USER": env("POSTGRES_USER", "idealcommerce"),
-            "PASSWORD": env("POSTGRES_PASSWORD", "idealcommerce"),
+            "NAME": env("POSTGRES_DB", "eandewigs"),
+            "USER": env("POSTGRES_USER", "eandewigs"),
+            "PASSWORD": env("POSTGRES_PASSWORD", "eandewigs"),
             "HOST": env("POSTGRES_HOST", "localhost"),
             "PORT": env("POSTGRES_PORT", "5432"),
         }
@@ -175,7 +175,7 @@ REST_FRAMEWORK: dict[str, Any] = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "IdealCommerce API",
+    "TITLE": "Eandewigs API",
     "DESCRIPTION": "Modular e-commerce + dropshipping platform.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -199,7 +199,7 @@ SIMPLE_JWT = {
 
 # Frontend base URL used to build password-reset links in emails.
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", "http://localhost:3000")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@idealcommerce.test")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@eandewigs.test")
 
 # --- Celery -----------------------------------------------------------------
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", env("REDIS_URL", "redis://localhost:6379/0"))
@@ -253,7 +253,7 @@ CLOUDINARY_STORAGE = {
 CLOUDINARY_CLOUD_NAME = env("CLOUDINARY_CLOUD_NAME")
 CLOUDINARY_API_KEY = env("CLOUDINARY_API_KEY")
 CLOUDINARY_API_SECRET = env("CLOUDINARY_API_SECRET")
-CLOUDINARY_UPLOAD_FOLDER = env("CLOUDINARY_UPLOAD_FOLDER", "idealcommerce/products")
+CLOUDINARY_UPLOAD_FOLDER = env("CLOUDINARY_UPLOAD_FOLDER", "eandewigs/products")
 
 # Pluggable product-image backend. "cloudinary" hits the real account; "static"
 # serves generated SVGs from the storefront's /public folder (key-less local dev
@@ -318,10 +318,10 @@ ZEPTOMAIL_TOKEN = env("ZEPTOMAIL_TOKEN", "")
 
 # Sender identity + branding used in emails.
 EMAIL_FROM_ADDRESS = env(
-    "EMAIL_FROM_ADDRESS", env("DEFAULT_FROM_EMAIL", "no-reply@idealcommerce.test")
+    "EMAIL_FROM_ADDRESS", env("DEFAULT_FROM_EMAIL", "no-reply@eandewigs.test")
 )
-EMAIL_FROM_NAME = env("EMAIL_FROM_NAME", "IdealCommerce")
-SUPPORT_EMAIL = env("SUPPORT_EMAIL", "support@idealcommerce.test")
+EMAIL_FROM_NAME = env("EMAIL_FROM_NAME", "Eandewigs")
+SUPPORT_EMAIL = env("SUPPORT_EMAIL", "support@eandewigs.test")
 EMAIL_LOGO_URL = env("EMAIL_LOGO_URL", f"{FRONTEND_BASE_URL.rstrip('/')}/logo.png")
 
 # Telegram bot. TELEGRAM_DEFAULT_CHAT_ID is the store-ops chat (new-order alerts).

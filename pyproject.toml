@@ -1,7 +1,7 @@
 [project]
-name = "idealcommerce-backend"
+name = "eandewigs-backend"
 version = "0.1.0"
-description = "IdealCommerce — modular e-commerce + dropshipping platform (backend)"
+description = "Eandewigs — modular e-commerce + dropshipping platform (backend)"
 requires-python = ">=3.12"
 dependencies = [
     "Django>=5.0,<5.2",

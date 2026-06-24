@@ -1,16 +1,16 @@
 [Unit]
-Description=IdealCommerce Celery worker (nasuru-api)
+Description=Eandewigs Celery worker (eandewigs-api)
 After=network.target redis-server.service postgresql.service
 Wants=redis-server.service postgresql.service
 
 [Service]
 Type=simple
-User=prime
+User=mmeso
 Group=www-data
-WorkingDirectory=/home/prime/nasuru-api
+WorkingDirectory=/home/mmeso/backend
 Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
 # --concurrency=1 keeps memory tiny on a 512MB host; raise on a bigger box.
-ExecStart=/home/prime/nasuru-api/.venv/bin/celery -A config worker \
+ExecStart=/home/mmeso/backend/.venv/bin/celery -A config worker \
     --loglevel=info \
     --concurrency=1 \
     --max-tasks-per-child=100

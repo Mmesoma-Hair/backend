@@ -112,7 +112,7 @@ def test_admin_add_image_then_delete(client: APIClient) -> None:
     product = ProductFactory()
     add = client.post(
         f"/api/v1/admin/catalog/products/{product.id}/images/",
-        {"public_id": "idealcommerce/products/api-img", "is_primary": True},
+        {"public_id": "eandewigs/products/api-img", "is_primary": True},
         format="json",
     )
     assert add.status_code == 201
