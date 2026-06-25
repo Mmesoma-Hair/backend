@@ -99,6 +99,23 @@ def _hex_color(value: Any) -> None:
         raise ValidationError("Must be a hex colour like #6E0D25.")
 
 
+def _social_links(value: Any) -> None:
+    """A list of {name, url, icon} entries. ``icon`` is a free-form key resolved
+    to an SVG by the storefront (unknown keys fall back to a generic link icon),
+    so only structure + required string fields are validated here."""
+    if not isinstance(value, list):
+        raise ValidationError("Must be a list of social links.")
+    if len(value) > 30:
+        raise ValidationError("Too many social links (max 30).")
+    for i, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValidationError(f"Link #{i + 1} must be an object.")
+        for fieldname in ("name", "url", "icon"):
+            field_val = item.get(fieldname)
+            if not isinstance(field_val, str) or not field_val.strip():
+                raise ValidationError(f"Link #{i + 1} requires a non-empty '{fieldname}'.")
+
+
 # --- the registry -----------------------------------------------------------
 SETTINGS: dict[str, SettingSpec] = {
     spec.key: spec
@@ -250,6 +267,21 @@ SETTINGS: dict[str, SettingSpec] = {
         SettingSpec(
             "content.announcement", "content", TEXT, "", "Site-wide announcement banner text."
         ),
+        # Footer social links — fully admin-managed (add/remove/reorder).
+        SettingSpec(
+            "footer.social_links",
+            "footer",
+            JSON,
+            [
+                {"name": "Instagram", "url": "https://instagram.com", "icon": "instagram"},
+                {"name": "TikTok", "url": "https://tiktok.com", "icon": "tiktok"},
+                {"name": "YouTube", "url": "https://youtube.com", "icon": "youtube"},
+                {"name": "Facebook", "url": "https://facebook.com", "icon": "facebook"},
+                {"name": "Pinterest", "url": "https://pinterest.com", "icon": "pinterest"},
+            ],
+            "Social links shown in the storefront footer (name, URL, icon).",
+            _social_links,
+        ),
         # Homepage hero (all admin-controlled)
         SettingSpec(
             "hero.badge",
@@ -400,6 +432,7 @@ PUBLIC_KEYS: frozenset[str] = frozenset(
         "features.guest_checkout",
         "catalog.hide_out_of_stock",
         "content.announcement",
+        "footer.social_links",
         "hero.badge",
         "hero.headline",
         "hero.subtext",

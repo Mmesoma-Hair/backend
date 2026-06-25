@@ -62,6 +62,41 @@ def test_reset_setting_falls_back_to_default() -> None:
 
 
 @pytest.mark.django_db
+def test_social_links_default_and_valid_write() -> None:
+    default = selectors.get_setting("footer.social_links")
+    assert isinstance(default, list) and default
+    assert {"name", "url", "icon"} <= set(default[0])
+
+    services.set_setting(
+        "footer.social_links",
+        [{"name": "X", "url": "https://x.com/eandewigs", "icon": "x"}],
+    )
+    stored = selectors.get_setting("footer.social_links")
+    assert stored == [{"name": "X", "url": "https://x.com/eandewigs", "icon": "x"}]
+
+
+@pytest.mark.django_db
+def test_social_links_rejects_malformed() -> None:
+    with pytest.raises(ValidationError):
+        services.set_setting("footer.social_links", "not-a-list")
+    with pytest.raises(ValidationError):
+        # missing 'icon'
+        services.set_setting("footer.social_links", [{"name": "X", "url": "https://x.com"}])
+    with pytest.raises(ValidationError):
+        # blank name
+        services.set_setting(
+            "footer.social_links", [{"name": "  ", "url": "https://x.com", "icon": "x"}]
+        )
+
+
+@pytest.mark.django_db
+def test_social_links_is_public() -> None:
+    from apps.storeconfig.schema import PUBLIC_KEYS
+
+    assert "footer.social_links" in PUBLIC_KEYS
+
+
+@pytest.mark.django_db
 def test_set_many_is_atomic() -> None:
     with pytest.raises(ValidationError):
         services.set_many({"store.name": "Ok", "currency.base": "XX"})
