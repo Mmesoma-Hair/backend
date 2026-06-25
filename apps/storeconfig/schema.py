@@ -99,6 +99,22 @@ def _hex_color(value: Any) -> None:
         raise ValidationError("Must be a hex colour like #6E0D25.")
 
 
+def _seo_sections(value: Any) -> None:
+    """A list of {heading, body} long-form content blocks. ``{store}`` in either
+    field is replaced with the store name by the storefront; blank lines in
+    ``body`` separate paragraphs."""
+    if not isinstance(value, list):
+        raise ValidationError("Must be a list of content sections.")
+    if len(value) > 20:
+        raise ValidationError("Too many sections (max 20).")
+    for i, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValidationError(f"Section #{i + 1} must be an object.")
+        for fieldname in ("heading", "body"):
+            if not isinstance(item.get(fieldname), str):
+                raise ValidationError(f"Section #{i + 1} requires a string '{fieldname}'.")
+
+
 def _social_links(value: Any) -> None:
     """A list of {name, url, icon} entries. ``icon`` is a free-form key resolved
     to an SVG by the storefront (unknown keys fall back to a generic link icon),
@@ -267,6 +283,59 @@ SETTINGS: dict[str, SettingSpec] = {
         SettingSpec(
             "content.announcement", "content", TEXT, "", "Site-wide announcement banner text."
         ),
+        # Home-page SEO content blocks (admin-managed). `{store}` = store name;
+        # blank lines in a body separate paragraphs.
+        SettingSpec(
+            "content.seo_sections",
+            "content",
+            JSON,
+            [
+                {
+                    "heading": "{store} — No. 1 Suppliers of Clothing in Nigeria",
+                    "body": (
+                        "{store} is one of Nigeria's leading clothing suppliers, giving customers "
+                        "and resellers a single online store to find and shop for quality fashion "
+                        "at the best prices. From the comfort of your home or during a work break, "
+                        "you can browse our full collection and have everything delivered fast "
+                        "across Lagos and nationwide — without stress or moving an inch. Whether "
+                        "you need everyday outfits, statement pieces, or bulk stock for your "
+                        "business, you can get it all in one place at {store}.\n\n"
+                        "Beyond retail, {store} is built for wholesale. With minimum-order "
+                        "quantities and quantity price breaks on many products, boutique owners, "
+                        "market traders, and online vendors can buy more and save more — turning "
+                        "{store} into a reliable supply partner for their growing fashion business."
+                    ),
+                },
+                {
+                    "heading": "Shop Original, Quality Clothing at the Best Prices",
+                    "body": (
+                        "{store} prides itself on offering the best prices and the best quality of "
+                        "clothing you can find anywhere in the country. Every item is carefully "
+                        "sourced so that customers are assured of original, durable pieces — at "
+                        "retail and at wholesale. Enjoy regular offers and heavy discounts on flash "
+                        "sales spanning dresses, tops, denim, footwear, and accessories, and be "
+                        "among the first to shop new arrivals as soon as they drop."
+                    ),
+                },
+                {
+                    "heading": "The Latest Fashion and Trendy Outfits Online",
+                    "body": (
+                        "Discover an extensive range of fashion for women, men, and kids. Our "
+                        "women's collection includes blouses, tops, trousers, jeans and gowns in "
+                        "different lengths and materials to suit your style, alongside accessories "
+                        "like shoes, bags, jewelry, and sunglasses at unbeatable prices.\n\n"
+                        "For men, {store} carries stylish, quality pieces — trousers, shirts, "
+                        "shoes, watches and more — at the most affordable prices, plus trendy "
+                        "sneakers and sportswear for the active. And we haven't forgotten the "
+                        "little ones: browse our selection of children's clothing for boys and "
+                        "girls. Shop now on {store} and enjoy an incredible online shopping "
+                        "experience with fast delivery, easy returns, and flexible payment options."
+                    ),
+                },
+            ],
+            "Long-form SEO content sections on the home page (heading + body).",
+            _seo_sections,
+        ),
         # Footer social links — fully admin-managed (add/remove/reorder).
         SettingSpec(
             "footer.social_links",
@@ -432,6 +501,7 @@ PUBLIC_KEYS: frozenset[str] = frozenset(
         "features.guest_checkout",
         "catalog.hide_out_of_stock",
         "content.announcement",
+        "content.seo_sections",
         "footer.social_links",
         "hero.badge",
         "hero.headline",

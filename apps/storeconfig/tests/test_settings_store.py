@@ -97,6 +97,35 @@ def test_social_links_is_public() -> None:
 
 
 @pytest.mark.django_db
+def test_seo_sections_default_valid_write_and_public() -> None:
+    from apps.storeconfig.schema import PUBLIC_KEYS
+
+    assert "content.seo_sections" in PUBLIC_KEYS
+    default = selectors.get_setting("content.seo_sections")
+    assert isinstance(default, list) and default
+    assert {"heading", "body"} <= set(default[0])
+    assert "{store}" in default[0]["heading"]
+
+    services.set_setting(
+        "content.seo_sections",
+        [{"heading": "About us", "body": "Para one.\n\nPara two."}],
+    )
+    stored = selectors.get_setting("content.seo_sections")
+    assert stored == [{"heading": "About us", "body": "Para one.\n\nPara two."}]
+    # Clearing all sections is allowed.
+    services.set_setting("content.seo_sections", [])
+    assert selectors.get_setting("content.seo_sections") == []
+
+
+@pytest.mark.django_db
+def test_seo_sections_rejects_malformed() -> None:
+    with pytest.raises(ValidationError):
+        services.set_setting("content.seo_sections", {"heading": "x"})  # not a list
+    with pytest.raises(ValidationError):
+        services.set_setting("content.seo_sections", [{"heading": "x"}])  # missing body
+
+
+@pytest.mark.django_db
 def test_set_many_is_atomic() -> None:
     with pytest.raises(ValidationError):
         services.set_many({"store.name": "Ok", "currency.base": "XX"})
