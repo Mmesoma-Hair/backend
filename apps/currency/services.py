@@ -136,7 +136,9 @@ def effective_rate(from_code: str, to_code: str) -> Decimal:
 
 
 def format_amount(amount: Decimal, currency: Currency) -> str:
-    return f"{currency.symbol}{amount:.{currency.decimal_places}f}"
+    """Render a price for display: whole units, comma thousands (₦750,000)."""
+    whole = amount.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return f"{currency.symbol}{whole:,.0f}"
 
 
 def price_quote(base_amount: Decimal, to_code: str) -> dict[str, object]:
