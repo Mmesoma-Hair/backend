@@ -139,7 +139,11 @@ SETTINGS: dict[str, SettingSpec] = {
         # Store identity / branding
         SettingSpec("store.name", "identity", STRING, "Eandewigs", "Public store name."),
         SettingSpec(
-            "store.tagline", "identity", STRING, "Shop the world.", "Short marketing tagline."
+            "store.tagline",
+            "identity",
+            STRING,
+            "Best Wigs You can Trust",
+            "Short marketing tagline.",
         ),
         SettingSpec(
             "store.support_email",
