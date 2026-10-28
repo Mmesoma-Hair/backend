@@ -83,6 +83,18 @@ def test_price_quote_falls_back_to_base_when_no_rate(currencies: None) -> None:
 
 
 @pytest.mark.django_db
+def test_format_amount_whole_units_with_thousands_separators(currencies: None) -> None:
+    ngn = selectors.get_currency("NGN")
+    assert ngn is not None
+    assert services.format_amount(Decimal("750000.00"), ngn) == "₦750,000"
+    assert services.format_amount(Decimal("26000.40"), ngn) == "₦26,000"
+    usd = selectors.get_currency("USD")
+    assert usd is not None
+    assert services.format_amount(Decimal("12.49"), usd) == "$12"
+    assert services.format_amount(Decimal("12.50"), usd) == "$13"
+
+
+@pytest.mark.django_db
 def test_effective_rate_snapshot(currencies: None) -> None:
     services.refresh_rates()
     config_services.set_setting("currency.fx_markup_percent", "2.0")
