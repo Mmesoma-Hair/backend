@@ -43,6 +43,9 @@ dev = [
 # it as a wheel during `uv sync`.
 package = false
 
+[tool.vercel]
+entrypoint = "config.wsgi:application"
+
 [tool.black]
 line-length = 100
 target-version = ["py312"]

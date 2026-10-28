@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
@@ -38,9 +39,31 @@ def env_list(key: str, default: list[str] | None = None) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def vercel_hosts() -> list[str]:
+    hosts = []
+    for key in ("VERCEL_URL", "VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_BRANCH_URL"):
+        value = os.environ.get(key, "").strip()
+        if value:
+            parsed = urlsplit(value if "://" in value else f"//{value}")
+            if parsed.hostname:
+                hosts.append(parsed.hostname)
+    return hosts
+
+
 SECRET_KEY = env("DJANGO_SECRET_KEY", "insecure-dev-key-change-me")
 DEBUG = env_bool("DJANGO_DEBUG", False)
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
+VERCEL_HOSTS = vercel_hosts()
+ALLOWED_HOSTS = list(
+    dict.fromkeys([*env_list("DJANGO_ALLOWED_HOSTS", ["localhost", "127.0.0.1"]), *VERCEL_HOSTS])
+)
+CSRF_TRUSTED_ORIGINS = list(
+    dict.fromkeys(
+        [
+            *env_list("CSRF_TRUSTED_ORIGINS"),
+            *(f"https://{host}" for host in VERCEL_HOSTS),
+        ]
+    )
+)
 
 # --- Applications -----------------------------------------------------------
 DJANGO_APPS = [
@@ -133,6 +156,10 @@ else:
             "PASSWORD": env("POSTGRES_PASSWORD", "eandewigs"),
             "HOST": env("POSTGRES_HOST", "localhost"),
             "PORT": env("POSTGRES_PORT", "5432"),
+            "OPTIONS": {
+                "sslmode": env("POSTGRES_SSLMODE", "prefer"),
+                "channel_binding": env("POSTGRES_CHANNEL_BINDING", "prefer"),
+            },
         }
     }
 
